@@ -72,3 +72,4 @@ dump.rdb
 
 # Local runtime upload artifacts
 backend/core-api/src/utils/private/uploads/
+IMPLEMENTATION_PLAN.md
