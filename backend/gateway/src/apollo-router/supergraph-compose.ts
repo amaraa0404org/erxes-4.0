@@ -42,8 +42,8 @@ const writeSupergraphConfig = async (
   const filteredTargets = proxyTargets.filter((t) => {
     const s =
       t.config?.scope ||
-      (t.name === 'clientportal' ? 'external' : 'internal');
-    return s === scope;
+      (t.name === 'clientportal' ? 'both' : 'internal');
+    return s === 'both' || s === scope;
   });
 
   if (filteredTargets.length === 0) {

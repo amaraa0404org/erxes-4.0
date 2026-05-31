@@ -105,7 +105,7 @@ httpServer.listen(port, async () => {
     port,
     hasSubscriptions: false,
     meta: {},
-    scope: 'external',
+    scope: 'both',
   });
 });
 

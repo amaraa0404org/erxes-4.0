@@ -7,7 +7,7 @@ import {
   userSchema,
 } from 'erxes-api-shared/core-modules';
 import { IUserDocument } from 'erxes-api-shared/core-types';
-import { createGenerateModels } from 'erxes-api-shared/utils';
+import { createGenerateModels, prisma } from 'erxes-api-shared/utils';
 import mongoose from 'mongoose';
 
 export interface IMainContext {
@@ -42,7 +42,26 @@ export const loadClasses = (db: mongoose.Connection): IModels => {
   models.ClientPortals =
     db.models.client_portals || db.model('client_portals', clientPortalSchema);
 
-  models.CPUsers = db.model('client_portal_users', cpUserSchema);
+  models.CPUsers = {
+    async findOne(query: any) {
+      if (!query) return null;
+      const id = query._id || query.id;
+      const clientPortalId = query.clientPortalId;
+      const user = await prisma.cPUser.findFirst({
+        where: {
+          id: id,
+          clientPortalId: clientPortalId
+        }
+      });
+      if (!user) return null;
+      return {
+        ...user,
+        _id: user.id,
+        toObject() { return this; },
+        toJSON() { return this; }
+      };
+    }
+  };
   models.Roles = db.model('roles', roleSchema);
 
   return models;

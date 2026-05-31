@@ -11,11 +11,8 @@ import { cpNotificationMutations } from '../../modules/clientportal/graphql/reso
 import customResolvers from '../../modules/clientportal/graphql/resolvers/customResolvers';
 
 const queries = {
-  currentUser: cpUserQueries.clientPortalCurrentUser,
   comment: commentQueries.clientPortalComment,
   comments: commentQueries.clientPortalComments,
-  notifications: cpNotificationQueries.clientPortalNotifications,
-  notificationDetail: cpNotificationQueries.clientPortalNotificationDetail,
   unreadNotificationCount: cpNotificationQueries.clientPortalUnreadNotificationCount,
 
   ...clientPortalQueries,

@@ -27,21 +27,8 @@ export const types = `
 `;
 
 export const queries = `
-  currentUser: CPUser
   comment(_id: String!): CPComment
   comments(filter: CPCommentFilter): CPCommentListResponse
-  notifications(
-    limit: Int
-    skip: Int
-    status: CPNotificationStatus
-    priority: CPNotificationPriority
-    type: CPNotificationType
-    kind: CPNotificationKind
-    fromDate: String
-    endDate: String
-    clientPortalId: String
-  ): CPNotificationListResponse
-  notificationDetail(_id: String!): CPNotification
   unreadNotificationCount(clientPortalId: String): Int
 
   ${clientPortalQueries || ''}

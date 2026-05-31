@@ -34,6 +34,8 @@ export function translateQuery(query: any, arrayFields: Set<string> = new Set(),
 
   const fieldsMap = modelName ? loadModelFields() : null;
   const nullableFields = fieldsMap && modelName ? fieldsMap[modelName.toLowerCase() + '_nullable'] : null;
+  const validFields = fieldsMap && modelName ? fieldsMap[modelName.toLowerCase()] : null;
+  console.log('[DEBUG TRANSLATE]', { modelName, hasFieldsMap: !!fieldsMap, hasValidFields: !!validFields, validFieldsKeys: validFields ? Array.from(validFields) : null });
 
   for (const [key, val] of Object.entries(query)) {
     if (key === '$or') {
@@ -58,6 +60,10 @@ export function translateQuery(query: any, arrayFields: Set<string> = new Set(),
     let prismaKey = key === '_id' ? 'id' : key;
     if (prismaKey.startsWith('details.')) {
       prismaKey = prismaKey.substring(8);
+    }
+
+    if (validFields && !validFields.has(prismaKey)) {
+      continue;
     }
 
     // Handle $in arrays containing null
@@ -619,7 +625,9 @@ export class CentralPrismaFindOneQuery {
 
   async exec() {
     const modelName = (this.prismaModel.name || this.prismaModel.$name || '').toLowerCase();
+    console.log('[DEBUG CENTRAL QUERY]', { modelName, query: this.query });
     const where = translateQuery(this.query, this.arrayFields, modelName);
+    console.log('[DEBUG CENTRAL QUERY RESULT]', { where });
     const options: any = { where };
     if (this.sortOrder) {
       options.orderBy = translateSort(this.sortOrder);
