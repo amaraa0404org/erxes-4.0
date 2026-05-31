@@ -170,7 +170,7 @@ export const userMutations: Record<string, Resolver<any, any, IContext>> = {
       throw new ValidationError('platform must be ios, android, or web');
     }
 
-    const doc = await models.CPUser.findById(cpUser._id).lean();
+    const doc = await models.CPUser.findOne({ _id: cpUser._id });
     const current = (doc?.fcmTokens || []) as Array<{
       deviceId: string;
       token: string;
@@ -211,9 +211,17 @@ export const userMutations: Record<string, Resolver<any, any, IContext>> = {
       throw new ValidationError('deviceId is required');
     }
 
+    const doc = await models.CPUser.findOne({ _id: cpUser._id });
+    const current = (doc?.fcmTokens || []) as Array<{
+      deviceId: string;
+      token: string;
+      platform: string;
+    }>;
+    const next = current.filter((d) => d.deviceId !== trimmedDeviceId);
+
     await models.CPUser.updateOne(
       { _id: cpUser._id },
-      { $pull: { fcmTokens: { deviceId: trimmedDeviceId } } },
+      { $set: { fcmTokens: next } },
     );
 
     return getCPUserByIdOrThrow(cpUser._id, models);

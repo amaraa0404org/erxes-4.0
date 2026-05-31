@@ -206,16 +206,31 @@ export default class SubscriptionResolver {
 
   constructor(gatewayURL: string, context: any) {
     const contextLink = setContext((_request, previousContext) => {
-      const cookie = context.extra?.request?.headers?.cookie;
-      if (cookie) {
-        if (!previousContext) {
-          previousContext = {};
-        }
-        if (!previousContext.headers) {
-          previousContext.headers = {};
-        }
-        previousContext.headers.cookie = context.extra.request.headers.cookie;
+      const headers = context.extra?.request?.headers || {};
+      const params = context.connectionParams || {};
+
+      if (!previousContext) {
+        previousContext = {};
       }
+      if (!previousContext.headers) {
+        previousContext.headers = {};
+      }
+
+      const cookie = headers.cookie || params.cookie;
+      if (cookie) {
+        previousContext.headers.cookie = cookie;
+      }
+
+      const appToken = headers['x-app-token'] || params['x-app-token'] || params.xAppToken;
+      if (appToken) {
+        previousContext.headers['x-app-token'] = appToken;
+      }
+
+      const authToken = headers['client-auth-token'] || params['client-auth-token'] || params.clientAuthToken;
+      if (authToken) {
+        previousContext.headers['client-auth-token'] = authToken;
+      }
+
       return previousContext;
     });
 

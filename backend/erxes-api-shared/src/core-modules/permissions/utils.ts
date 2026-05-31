@@ -223,11 +223,11 @@ export const wrapPublicResolver = (resolver: Resolver, wrapperConfig: any) => {
     const { cpUserRequired, forClientPortal } = wrapperConfig || {};
 
     if (forClientPortal) {
-      if (!context.clientPortal) {
+      if (!context || !context.clientPortal) {
         throw new Error('Client portal required');
       }
 
-      if (cpUserRequired && !context.cpUser) {
+      if (cpUserRequired && (!context || !context.cpUser)) {
         throw new Error('Client portal user required');
       }
     }
