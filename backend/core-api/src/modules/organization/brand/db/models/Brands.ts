@@ -111,3 +111,79 @@ export const loadBrandClass = (
 
   return brandSchema;
 };
+
+// ================= PRISMA POSTGRESQL ADAPTER =================
+import { prisma } from 'erxes-api-shared/utils';
+import { createPrismaAdapter } from '~/utils/prismaAdapter';
+
+function mapPrismaBrandToMongoose(b: any): any {
+  if (!b) return null;
+  return {
+    ...b,
+    _id: b.id,
+    toObject() {
+      return this;
+    },
+    toJSON() {
+      return this;
+    },
+    async updateOne(update: any) {
+      const data = mapMongooseUpdateToPrismaBrand(update);
+      return prisma.brand.update({
+        where: { id: b.id },
+        data,
+      });
+    },
+    async deleteOne() {
+      return prisma.brand.delete({
+        where: { id: b.id },
+      });
+    }
+  };
+}
+
+function mapMongooseToPrismaBrand(doc: any): any {
+  if (!doc) return {};
+  const mapped = { ...doc };
+  if (doc._id) {
+    mapped.id = doc._id;
+    delete mapped._id;
+  }
+  return mapped;
+}
+
+function mapMongooseUpdateToPrismaBrand(update: any): any {
+  if (!update) return {};
+  const data: any = {};
+  if (update.$set) {
+    Object.assign(data, mapMongooseToPrismaBrand(update.$set));
+  }
+  if (!update.$set) {
+    Object.assign(data, mapMongooseToPrismaBrand(update));
+  }
+  return data;
+}
+
+export const loadPrismaBrands = (
+  subdomain: string,
+  models: IModels,
+  coreEventHandlers: (
+    moduleName: string,
+    collectionName: string,
+  ) => EventDispatcherReturn,
+) => {
+  const origSchema = loadBrandClass(subdomain, models, coreEventHandlers('organization', 'brands'));
+  const origStatics = (origSchema as any).statics || {};
+
+  const modelAdapter = createPrismaAdapter(
+    prisma.brand,
+    mapPrismaBrandToMongoose,
+    mapMongooseToPrismaBrand,
+    mapMongooseUpdateToPrismaBrand
+  );
+
+  Object.assign(modelAdapter, origStatics);
+
+  return modelAdapter as any;
+};
+

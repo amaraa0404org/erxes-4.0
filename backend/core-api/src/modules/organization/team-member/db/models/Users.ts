@@ -1391,3 +1391,243 @@ export const loadUserMovemmentClass = (
   userMovemmentSchema.loadClass(UserMovemment);
   return userMovemmentSchema;
 };
+
+// ================= PRISMA POSTGRESQL ADAPTER =================
+import { prisma } from 'erxes-api-shared/utils';
+import { createPrismaAdapter } from '~/utils/prismaAdapter';
+
+// Array fields mapping
+const ARRAY_FIELDS = new Set([
+  'onboardedPlugins',
+  'departmentIds',
+  'branchIds',
+  'positionIds',
+  'brandIds',
+  'groupIds',
+  'deviceTokens',
+  'permissionGroupIds',
+  'starredConversationIds'
+]);
+
+// Document Mappers
+function mapPrismaUserToMongoose(user: any): any {
+  if (!user) return null;
+  
+  const {
+    avatar,
+    coverPhoto,
+    shortName,
+    fullName,
+    birthDate,
+    workStartedDate,
+    position,
+    location,
+    description,
+    operatorPhone,
+    firstName,
+    middleName,
+    lastName,
+    properties,
+    ...rest
+  } = user;
+
+  const mapped: any = {
+    ...rest,
+    _id: user.id,
+    id: user.id,
+    propertiesData: properties,
+    onboardedPlugins: user.onboardedPlugins || [],
+    departmentIds: user.departmentIds || [],
+    branchIds: user.branchIds || [],
+    positionIds: user.positionIds || [],
+    brandIds: user.brandIds || [],
+    groupIds: user.groupIds || [],
+    deviceTokens: user.deviceTokens || [],
+    permissionGroupIds: user.permissionGroupIds || [],
+    starredConversationIds: user.starredConversationIds || [],
+    links: user.links || {},
+    emailSignatures: user.emailSignatures || [],
+    customFieldsData: user.customFieldsData || [],
+    details: {
+      avatar,
+      coverPhoto,
+      shortName,
+      fullName,
+      birthDate,
+      workStartedDate,
+      position,
+      location,
+      description,
+      operatorPhone,
+      firstName,
+      middleName,
+      lastName,
+    },
+    toObject() {
+      return this;
+    },
+    toJSON() {
+      return this;
+    },
+    async updateOne(update: any) {
+      const data = mapMongooseUpdateToPrisma(update);
+      return prisma.user.update({
+        where: { id: user.id },
+        data,
+      });
+    }
+  };
+
+  return mapped;
+}
+
+function mapMongooseToPrismaUser(doc: any): any {
+  if (!doc) return {};
+  const { details, propertiesData, links, emailSignatures, customFieldsData, ...rest } = doc;
+  
+  const mapped: any = { ...rest };
+  
+  if (details) {
+    const detailFields = [
+      'avatar', 'coverPhoto', 'shortName', 'fullName', 'birthDate',
+      'workStartedDate', 'position', 'location', 'description',
+      'operatorPhone', 'firstName', 'middleName', 'lastName'
+    ];
+    for (const field of detailFields) {
+      if (details[field] !== undefined) {
+        mapped[field] = details[field];
+      }
+    }
+  }
+
+  if (propertiesData !== undefined) {
+    mapped.properties = propertiesData;
+  }
+
+  if (links !== undefined) {
+    mapped.links = links;
+  }
+  if (emailSignatures !== undefined) {
+    mapped.emailSignatures = emailSignatures;
+  }
+  if (customFieldsData !== undefined) {
+    mapped.customFieldsData = customFieldsData;
+  }
+
+  if (doc._id) {
+    mapped.id = doc._id;
+    delete mapped._id;
+  }
+
+  return mapped;
+}
+
+function mapMongooseUpdateToPrisma(update: any): any {
+  if (!update) return {};
+  const data: any = {};
+
+  if (update.$set) {
+    Object.assign(data, mapMongooseToPrismaUser(update.$set));
+  }
+  if (update.$unset) {
+    for (const key of Object.keys(update.$unset)) {
+      const prismaKey = key === '_id' ? 'id' : key;
+      if (prismaKey.startsWith('details.')) {
+        const field = prismaKey.substring(8);
+        data[field] = null;
+      } else {
+        data[prismaKey] = null;
+      }
+    }
+  }
+  if (!update.$set && !update.$unset) {
+    Object.assign(data, mapMongooseToPrismaUser(update));
+  }
+
+  return data;
+}
+
+// UserMovement Mappers
+function mapPrismaUserMovementToMongoose(m: any): any {
+  if (!m) return null;
+  return {
+    ...m,
+    _id: m.id,
+    toObject() {
+      return this;
+    },
+    toJSON() {
+      return this;
+    }
+  };
+}
+
+function mapMongooseToPrismaUserMovement(doc: any): any {
+  if (!doc) return {};
+  const mapped = { ...doc };
+  if (doc._id) {
+    mapped.id = doc._id;
+    delete mapped._id;
+  }
+  return mapped;
+}
+
+function mapMongooseUpdateToPrismaUserMovement(update: any): any {
+  if (!update) return {};
+  const data: any = {};
+  if (update.$set) {
+    Object.assign(data, mapMongooseToPrismaUserMovement(update.$set));
+  }
+  if (!update.$set) {
+    Object.assign(data, mapMongooseToPrismaUserMovement(update));
+  }
+  return data;
+}
+
+// Load Prisma-backed Model implementations
+export const loadPrismaUsers = (
+  models: IModels,
+  subdomain: string,
+  coreEventHandlers: (
+    moduleName: string,
+    collectionName: string,
+  ) => EventDispatcherReturn,
+) => {
+  const origSchema = loadUserClass(models, subdomain, coreEventHandlers);
+  const origStatics = (origSchema as any).statics || {};
+
+  const modelAdapter = createPrismaAdapter(
+    prisma.user,
+    mapPrismaUserToMongoose,
+    mapMongooseToPrismaUser,
+    mapMongooseUpdateToPrisma,
+    ARRAY_FIELDS
+  );
+
+  Object.assign(modelAdapter, origStatics);
+
+  return modelAdapter as any;
+};
+
+export const loadPrismaUserMovements = (
+  models: IModels,
+  subdomain: string,
+  coreEventHandlers: (
+    moduleName: string,
+    collectionName: string,
+  ) => EventDispatcherReturn,
+) => {
+  const origSchema = loadUserMovemmentClass(models, subdomain, coreEventHandlers);
+  const origStatics = (origSchema as any).statics || {};
+
+  const modelAdapter = createPrismaAdapter(
+    prisma.userMovement,
+    mapPrismaUserMovementToMongoose,
+    mapMongooseToPrismaUserMovement,
+    mapMongooseUpdateToPrismaUserMovement
+  );
+
+  Object.assign(modelAdapter, origStatics);
+
+  return modelAdapter as any;
+};

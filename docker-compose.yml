@@ -1,0 +1,41 @@
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: erxes-postgres-db
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-erxes_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-erxes_password}
+      POSTGRES_DB: ${POSTGRES_DB:-erxes}
+    ports:
+      - "5432:5432"
+    volumes:
+      - erxes_postgres_data:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7-alpine
+    container_name: erxes-redis-db
+    restart: always
+    ports:
+      - "6379:6379"
+    volumes:
+      - erxes_redis_data:/data
+
+  elasticsearch:
+    image: elasticsearch:7.17.24
+    container_name: erxes-elasticsearch-db
+    restart: always
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    ports:
+      - "9200:9200"
+    volumes:
+      - erxes_elasticsearch_data:/usr/share/elasticsearch/data
+
+volumes:
+  erxes_postgres_data:
+  erxes_redis_data:
+  erxes_elasticsearch_data:

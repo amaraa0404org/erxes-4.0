@@ -1,8 +1,10 @@
+import '../load-env';
 import * as dotenv from 'dotenv';
 
 import {
   getSubdomain,
   redis,
+  prisma,
   setClientPortalHeader,
   setCPUserHeader,
   setUserHeader,
@@ -156,10 +158,30 @@ export default async function userMiddleware(
 
   if (appToken) {
     try {
-      const appInDb = await models.Apps.findOne({
+      let appInDb = await models.Apps.findOne({
         token: appToken,
         status: 'active',
       });
+
+      if (!appInDb) {
+        try {
+          const pApp = await prisma.app.findFirst({
+            where: {
+              token: appToken,
+              status: 'active',
+            },
+          });
+          if (pApp) {
+            appInDb = {
+              _id: pApp.id,
+              token: pApp.token,
+              status: pApp.status,
+            };
+          }
+        } catch (err) {
+          console.error('Prisma app lookup error in gateway:', err);
+        }
+      }
 
       if (!appInDb) {
         debugAuth(req, 'invalid-app-token', {
@@ -169,10 +191,19 @@ export default async function userMiddleware(
         return res.status(401).json({ error: 'Invalid app token' });
       }
 
-      await models.Apps.updateOne(
-        { _id: appInDb._id },
-        { $set: { lastUsedAt: new Date() } },
-      );
+      try {
+        await models.Apps.updateOne(
+          { _id: appInDb._id },
+          { $set: { lastUsedAt: new Date() } },
+        );
+      } catch (err) {
+        await prisma.app
+          .update({
+            where: { id: appInDb._id },
+            data: { lastUsedAt: new Date() },
+          })
+          .catch(() => {});
+      }
     } catch (e) {
       console.error(e);
       debugAuth(req, 'app-token-error', {
@@ -306,10 +337,44 @@ export default async function userMiddleware(
       return next();
     }
 
-    const userDoc = await models.Users.findOne(
-      { _id: user._id },
-      '_id email details isOwner groupIds brandIds username code branchIds departmentIds permissionGroupIds',
-    ).lean();
+    let userDoc: any = null;
+
+    try {
+      const pUser = await prisma.user.findUnique({
+        where: { id: user._id },
+      });
+      if (pUser) {
+        userDoc = {
+          _id: pUser.id,
+          email: pUser.email,
+          username: pUser.username,
+          isOwner: pUser.isOwner,
+          code: pUser.code,
+          isActive: pUser.isActive,
+          details: {
+            avatar: pUser.avatar,
+            shortName: pUser.shortName,
+            fullName: pUser.fullName,
+            firstName: pUser.firstName,
+            lastName: pUser.lastName,
+          },
+          groupIds: pUser.groupIds || [],
+          brandIds: pUser.brandIds || [],
+          branchIds: pUser.branchIds || [],
+          departmentIds: pUser.departmentIds || [],
+          permissionGroupIds: pUser.permissionGroupIds || [],
+        };
+      }
+    } catch (err) {
+      console.error('Prisma user lookup error in gateway:', err);
+    }
+
+    if (!userDoc) {
+      userDoc = await models.Users.findOne(
+        { _id: user._id },
+        '_id email details isOwner groupIds brandIds username code branchIds departmentIds permissionGroupIds',
+      ).lean();
+    }
 
     if (!userDoc) {
       debugAuth(req, 'user-not-found', {

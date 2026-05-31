@@ -403,3 +403,84 @@ export const loadCompanyClass = (
 
   return companySchema;
 };
+
+// ================= PRISMA POSTGRESQL ADAPTER =================
+import { prisma } from 'erxes-api-shared/utils';
+import { createPrismaAdapter } from '~/utils/prismaAdapter';
+
+const COMPANY_ARRAY_FIELDS = new Set([
+  'names',
+  'industry',
+  'emails',
+  'phones',
+  'tagIds',
+  'mergedIds'
+]);
+
+function mapPrismaCompanyToMongoose(c: any): any {
+  if (!c) return null;
+  return {
+    ...c,
+    _id: c.id,
+    names: c.names || [],
+    industry: c.industry || [],
+    emails: c.emails || [],
+    phones: c.phones || [],
+    tagIds: c.tagIds || [],
+    mergedIds: c.mergedIds || [],
+    toObject() { return this; },
+    toJSON() { return this; },
+    async updateOne(update: any) {
+      const data = mapMongooseUpdateToPrismaCompany(update);
+      return prisma.company.update({ where: { id: c.id }, data });
+    },
+    async deleteOne() {
+      return prisma.company.delete({ where: { id: c.id } });
+    }
+  };
+}
+function mapMongooseToPrismaCompany(doc: any): any {
+  if (!doc) return {};
+  const mapped = { ...doc };
+  if (doc._id) {
+    mapped.id = doc._id;
+    delete mapped._id;
+  }
+  return mapped;
+}
+function mapMongooseUpdateToPrismaCompany(update: any): any {
+  if (!update) return {};
+  const data: any = {};
+  if (update.$set) {
+    Object.assign(data, mapMongooseToPrismaCompany(update.$set));
+  }
+  if (!update.$set) {
+    Object.assign(data, mapMongooseToPrismaCompany(update));
+  }
+  return data;
+}
+
+export const loadPrismaCompanies = (
+  subdomain: string,
+  models: IModels,
+  coreEventHandlers: (
+    moduleName: string,
+    collectionName: string,
+  ) => EventDispatcherReturn,
+) => {
+  const origSchema = loadCompanyClass(subdomain, models, coreEventHandlers('contacts', 'companies'));
+  const origStatics = (origSchema as any).statics || {};
+
+  const modelAdapter = createPrismaAdapter(
+    prisma.company,
+    mapPrismaCompanyToMongoose,
+    mapMongooseToPrismaCompany,
+    mapMongooseUpdateToPrismaCompany,
+    COMPANY_ARRAY_FIELDS
+  );
+
+  Object.assign(modelAdapter, origStatics);
+
+  return modelAdapter as any;
+};
+

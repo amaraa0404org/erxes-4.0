@@ -33,7 +33,25 @@ Sentry.getGlobalScope().setTags({
   service: PLUGIN_NAME,
 });
 
-dotenv.config();
+// Load .env from the nearest ancestor directory that has one.
+// When nx runs `serve` with cwd=backend/core-api, the root .env is two
+// levels up. Walking upward mirrors what prisma.config.ts already does.
+(function loadRootEnv() {
+  const fs = require('fs');
+  let dir = process.cwd();
+  const root = path.parse(dir).root;
+  while (dir !== root) {
+    const envPath = path.join(dir, '.env');
+    if (fs.existsSync(envPath)) {
+      dotenv.config({ path: envPath });
+      return;
+    }
+    dir = path.dirname(dir);
+  }
+  // Fallback: default behaviour
+  dotenv.config();
+})();
+
 
 const { DOMAIN, ALLOWED_ORIGINS, WIDGETS_DOMAIN, ALLOWED_DOMAINS } =
   process.env;

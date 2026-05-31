@@ -647,3 +647,300 @@ export const loadPositionClass = (
 
   return positionSchema;
 };
+
+// ================= PRISMA POSTGRESQL ADAPTER =================
+import { prisma } from 'erxes-api-shared/utils';
+import { createPrismaAdapter } from '~/utils/prismaAdapter';
+
+// Structure mappers
+function mapPrismaStructureToMongoose(s: any): any {
+  if (!s) return null;
+  return {
+    ...s,
+    _id: s.id,
+    toObject() { return this; },
+    toJSON() { return this; },
+    async updateOne(update: any) {
+      const data = mapMongooseUpdateToPrismaStructure(update);
+      return prisma.structure.update({ where: { id: s.id }, data });
+    },
+    async deleteOne() {
+      return prisma.structure.delete({ where: { id: s.id } });
+    }
+  };
+}
+function mapMongooseToPrismaStructure(doc: any): any {
+  if (!doc) return {};
+  const mapped = { ...doc };
+  if (doc._id) {
+    mapped.id = doc._id;
+    delete mapped._id;
+  }
+  return mapped;
+}
+function mapMongooseUpdateToPrismaStructure(update: any): any {
+  if (!update) return {};
+  const data: any = {};
+  if (update.$set) {
+    Object.assign(data, mapMongooseToPrismaStructure(update.$set));
+  }
+  if (!update.$set) {
+    Object.assign(data, mapMongooseToPrismaStructure(update));
+  }
+  return data;
+}
+
+// Department mappers
+function mapPrismaDepartmentToMongoose(d: any): any {
+  if (!d) return null;
+  return {
+    ...d,
+    _id: d.id,
+    toObject() { return this; },
+    toJSON() { return this; },
+    async updateOne(update: any) {
+      const data = mapMongooseUpdateToPrismaDepartment(update);
+      return prisma.department.update({ where: { id: d.id }, data });
+    },
+    async deleteOne() {
+      return prisma.department.delete({ where: { id: d.id } });
+    }
+  };
+}
+function mapMongooseToPrismaDepartment(doc: any): any {
+  if (!doc) return {};
+  const mapped = { ...doc };
+  if (doc._id) {
+    mapped.id = doc._id;
+    delete mapped._id;
+  }
+  return mapped;
+}
+function mapMongooseUpdateToPrismaDepartment(update: any): any {
+  if (!update) return {};
+  const data: any = {};
+  if (update.$set) {
+    Object.assign(data, mapMongooseToPrismaDepartment(update.$set));
+  }
+  if (!update.$set) {
+    Object.assign(data, mapMongooseToPrismaDepartment(update));
+  }
+  return data;
+}
+
+// Unit mappers
+function mapPrismaUnitToMongoose(u: any): any {
+  if (!u) return null;
+  return {
+    ...u,
+    _id: u.id,
+    userIds: u.userIds || [],
+    toObject() { return this; },
+    toJSON() { return this; },
+    async updateOne(update: any) {
+      const data = mapMongooseUpdateToPrismaUnit(update);
+      return prisma.unit.update({ where: { id: u.id }, data });
+    },
+    async deleteOne() {
+      return prisma.unit.delete({ where: { id: u.id } });
+    }
+  };
+}
+function mapMongooseToPrismaUnit(doc: any): any {
+  if (!doc) return {};
+  const mapped = { ...doc };
+  if (doc._id) {
+    mapped.id = doc._id;
+    delete mapped._id;
+  }
+  return mapped;
+}
+function mapMongooseUpdateToPrismaUnit(update: any): any {
+  if (!update) return {};
+  const data: any = {};
+  if (update.$set) {
+    Object.assign(data, mapMongooseToPrismaUnit(update.$set));
+  }
+  if (!update.$set) {
+    Object.assign(data, mapMongooseToPrismaUnit(update));
+  }
+  return data;
+}
+
+// Branch mappers
+function mapPrismaBranchToMongoose(b: any): any {
+  if (!b) return null;
+  return {
+    ...b,
+    _id: b.id,
+    toObject() { return this; },
+    toJSON() { return this; },
+    async updateOne(update: any) {
+      const data = mapMongooseUpdateToPrismaBranch(update);
+      return prisma.branch.update({ where: { id: b.id }, data });
+    },
+    async deleteOne() {
+      return prisma.branch.delete({ where: { id: b.id } });
+    }
+  };
+}
+function mapMongooseToPrismaBranch(doc: any): any {
+  if (!doc) return {};
+  const mapped = { ...doc };
+  if (doc._id) {
+    mapped.id = doc._id;
+    delete mapped._id;
+  }
+  return mapped;
+}
+function mapMongooseUpdateToPrismaBranch(update: any): any {
+  if (!update) return {};
+  const data: any = {};
+  if (update.$set) {
+    Object.assign(data, mapMongooseToPrismaBranch(update.$set));
+  }
+  if (!update.$set) {
+    Object.assign(data, mapMongooseToPrismaBranch(update));
+  }
+  return data;
+}
+
+// Position mappers
+function mapPrismaPositionToMongoose(p: any): any {
+  if (!p) return null;
+  return {
+    ...p,
+    _id: p.id,
+    userIds: p.userIds || [],
+    toObject() { return this; },
+    toJSON() { return this; },
+    async updateOne(update: any) {
+      const data = mapMongooseUpdateToPrismaPosition(update);
+      return prisma.position.update({ where: { id: p.id }, data });
+    },
+    async deleteOne() {
+      return prisma.position.delete({ where: { id: p.id } });
+    }
+  };
+}
+function mapMongooseToPrismaPosition(doc: any): any {
+  if (!doc) return {};
+  const mapped = { ...doc };
+  if (doc._id) {
+    mapped.id = doc._id;
+    delete mapped._id;
+  }
+  return mapped;
+}
+function mapMongooseUpdateToPrismaPosition(update: any): any {
+  if (!update) return {};
+  const data: any = {};
+  if (update.$set) {
+    Object.assign(data, mapMongooseToPrismaPosition(update.$set));
+  }
+  if (!update.$set) {
+    Object.assign(data, mapMongooseToPrismaPosition(update));
+  }
+  return data;
+}
+
+export const loadPrismaStructures = (models: IModels) => {
+  const origSchema = loadStructureClass(models);
+  const origStatics = (origSchema as any).statics || {};
+
+  const modelAdapter = createPrismaAdapter(
+    prisma.structure,
+    mapPrismaStructureToMongoose,
+    mapMongooseToPrismaStructure,
+    mapMongooseUpdateToPrismaStructure
+  );
+
+  Object.assign(modelAdapter, origStatics);
+
+  return modelAdapter as any;
+};
+
+export const loadPrismaDepartments = (
+  models: IModels,
+  coreEventHandlers: (
+    moduleName: string,
+    collectionName: string,
+  ) => EventDispatcherReturn,
+) => {
+  const origSchema = loadDepartmentClass(models, coreEventHandlers('organization', 'departments'));
+  const origStatics = (origSchema as any).statics || {};
+
+  const modelAdapter = createPrismaAdapter(
+    prisma.department,
+    mapPrismaDepartmentToMongoose,
+    mapMongooseToPrismaDepartment,
+    mapMongooseUpdateToPrismaDepartment
+  );
+
+  Object.assign(modelAdapter, origStatics);
+
+  return modelAdapter as any;
+};
+
+export const loadPrismaUnits = (models: IModels) => {
+  const origSchema = loadUnitClass(models);
+  const origStatics = (origSchema as any).statics || {};
+
+  const modelAdapter = createPrismaAdapter(
+    prisma.unit,
+    mapPrismaUnitToMongoose,
+    mapMongooseToPrismaUnit,
+    mapMongooseUpdateToPrismaUnit,
+    new Set(['userIds'])
+  );
+
+  Object.assign(modelAdapter, origStatics);
+
+  return modelAdapter as any;
+};
+
+export const loadPrismaBranches = (
+  models: IModels,
+  coreEventHandlers: (
+    moduleName: string,
+    collectionName: string,
+  ) => EventDispatcherReturn,
+) => {
+  const origSchema = loadBranchClass(models, coreEventHandlers('organization', 'branches'));
+  const origStatics = (origSchema as any).statics || {};
+
+  const modelAdapter = createPrismaAdapter(
+    prisma.branch,
+    mapPrismaBranchToMongoose,
+    mapMongooseToPrismaBranch,
+    mapMongooseUpdateToPrismaBranch
+  );
+
+  Object.assign(modelAdapter, origStatics);
+
+  return modelAdapter as any;
+};
+
+export const loadPrismaPositions = (
+  models: IModels,
+  coreEventHandlers: (
+    moduleName: string,
+    collectionName: string,
+  ) => EventDispatcherReturn,
+) => {
+  const origSchema = loadPositionClass(models, coreEventHandlers('organization', 'positions'));
+  const origStatics = (origSchema as any).statics || {};
+
+  const modelAdapter = createPrismaAdapter(
+    prisma.position,
+    mapPrismaPositionToMongoose,
+    mapMongooseToPrismaPosition,
+    mapMongooseUpdateToPrismaPosition,
+    new Set(['userIds'])
+  );
+
+  Object.assign(modelAdapter, origStatics);
+
+  return modelAdapter as any;
+};
+

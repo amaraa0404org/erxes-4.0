@@ -117,3 +117,72 @@ export const loadInternalNoteClass = (
 
   return internalNoteSchema;
 };
+
+// ================= PRISMA POSTGRESQL ADAPTER =================
+import { prisma } from 'erxes-api-shared/utils';
+import { createPrismaAdapter } from '~/utils/prismaAdapter';
+
+const INTERNAL_NOTE_ARRAY_FIELDS = new Set<string>();
+
+function mapPrismaInternalNoteToMongoose(inote: any): any {
+  if (!inote) return null;
+  return {
+    ...inote,
+    _id: inote.id,
+    toObject() { return this; },
+    toJSON() { return this; },
+    async updateOne(update: any) {
+      const data = mapMongooseUpdateToPrismaInternalNote(update);
+      return prisma.internalNote.update({ where: { id: inote.id }, data });
+    },
+    async deleteOne() {
+      return prisma.internalNote.delete({ where: { id: inote.id } });
+    }
+  };
+}
+
+function mapMongooseToPrismaInternalNote(doc: any): any {
+  if (!doc) return {};
+  const mapped = { ...doc };
+  if (doc._id) {
+    mapped.id = doc._id;
+    delete mapped._id;
+  }
+  return mapped;
+}
+
+function mapMongooseUpdateToPrismaInternalNote(update: any): any {
+  if (!update) return {};
+  const data: any = {};
+  if (update.$set) {
+    Object.assign(data, mapMongooseToPrismaInternalNote(update.$set));
+  }
+  if (!update.$set) {
+    Object.assign(data, mapMongooseToPrismaInternalNote(update));
+  }
+  return data;
+}
+
+export const loadPrismaInternalNotes = (
+  models: IModels,
+  subdomain: string,
+  coreEventHandlers: (
+    moduleName: string,
+    collectionName: string,
+  ) => EventDispatcherReturn,
+) => {
+  const origSchema = loadInternalNoteClass(models, subdomain, coreEventHandlers('internalNotes', 'internalNotes'));
+  const origStatics = (origSchema as any).statics || {};
+
+  const modelAdapter = createPrismaAdapter(
+    prisma.internalNote,
+    mapPrismaInternalNoteToMongoose,
+    mapMongooseToPrismaInternalNote,
+    mapMongooseUpdateToPrismaInternalNote,
+    INTERNAL_NOTE_ARRAY_FIELDS
+  );
+
+  Object.assign(modelAdapter, origStatics);
+
+  return modelAdapter as any;
+};

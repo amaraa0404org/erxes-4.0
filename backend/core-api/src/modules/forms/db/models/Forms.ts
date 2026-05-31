@@ -359,3 +359,126 @@ export const loadFormSubmissionClass = (models: IModels) => {
 
   return formSubmissionSchema;
 };
+
+// ================= PRISMA POSTGRESQL ADAPTER =================
+import { prisma } from 'erxes-api-shared/utils';
+import { createPrismaAdapter } from '~/utils/prismaAdapter';
+
+const FORM_ARRAY_FIELDS = new Set(['tagIds', 'departmentIds']);
+const FORM_SUBMISSION_ARRAY_FIELDS = new Set<string>();
+
+function mapPrismaFormToMongoose(f: any): any {
+  if (!f) return null;
+  return {
+    ...f,
+    _id: f.id,
+    tagIds: f.tagIds || [],
+    departmentIds: f.departmentIds || [],
+    leadData: f.leadData || {},
+    toObject() { return this; },
+    toJSON() { return this; },
+    async updateOne(update: any) {
+      const data = mapMongooseUpdateToPrismaForm(update);
+      return prisma.form.update({ where: { id: f.id }, data });
+    },
+    async deleteOne() {
+      return prisma.form.delete({ where: { id: f.id } });
+    }
+  };
+}
+
+function mapMongooseToPrismaForm(doc: any): any {
+  if (!doc) return {};
+  const mapped = { ...doc };
+  if (doc._id) {
+    mapped.id = doc._id;
+    delete mapped._id;
+  }
+  return mapped;
+}
+
+function mapMongooseUpdateToPrismaForm(update: any): any {
+  if (!update) return {};
+  const data: any = {};
+  if (update.$set) {
+    Object.assign(data, mapMongooseToPrismaForm(update.$set));
+  }
+  if (!update.$set) {
+    Object.assign(data, mapMongooseToPrismaForm(update));
+  }
+  return data;
+}
+
+export const loadPrismaForms = (models: IModels) => {
+  const origSchema = loadFormClass(models);
+  const origStatics = (origSchema as any).statics || {};
+
+  const modelAdapter = createPrismaAdapter(
+    prisma.form,
+    mapPrismaFormToMongoose,
+    mapMongooseToPrismaForm,
+    mapMongooseUpdateToPrismaForm,
+    FORM_ARRAY_FIELDS
+  );
+
+  Object.assign(modelAdapter, origStatics);
+
+  return modelAdapter as any;
+};
+
+function mapPrismaFormSubmissionToMongoose(fs: any): any {
+  if (!fs) return null;
+  return {
+    ...fs,
+    _id: fs.id,
+    value: fs.value || {},
+    toObject() { return this; },
+    toJSON() { return this; },
+    async updateOne(update: any) {
+      const data = mapMongooseUpdateToPrismaFormSubmission(update);
+      return prisma.formSubmission.update({ where: { id: fs.id }, data });
+    },
+    async deleteOne() {
+      return prisma.formSubmission.delete({ where: { id: fs.id } });
+    }
+  };
+}
+
+function mapMongooseToPrismaFormSubmission(doc: any): any {
+  if (!doc) return {};
+  const mapped = { ...doc };
+  if (doc._id) {
+    mapped.id = doc._id;
+    delete mapped._id;
+  }
+  return mapped;
+}
+
+function mapMongooseUpdateToPrismaFormSubmission(update: any): any {
+  if (!update) return {};
+  const data: any = {};
+  if (update.$set) {
+    Object.assign(data, mapMongooseToPrismaFormSubmission(update.$set));
+  }
+  if (!update.$set) {
+    Object.assign(data, mapMongooseToPrismaFormSubmission(update));
+  }
+  return data;
+}
+
+export const loadPrismaFormSubmissions = (models: IModels) => {
+  const origSchema = loadFormSubmissionClass(models);
+  const origStatics = (origSchema as any).statics || {};
+
+  const modelAdapter = createPrismaAdapter(
+    prisma.formSubmission,
+    mapPrismaFormSubmissionToMongoose,
+    mapMongooseToPrismaFormSubmission,
+    mapMongooseUpdateToPrismaFormSubmission,
+    FORM_SUBMISSION_ARRAY_FIELDS
+  );
+
+  Object.assign(modelAdapter, origStatics);
+
+  return modelAdapter as any;
+};

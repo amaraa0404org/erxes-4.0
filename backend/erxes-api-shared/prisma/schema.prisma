@@ -1,0 +1,594 @@
+datasource db {
+  provider = "postgresql"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+
+
+model User {
+  id                        String    @id @default(uuid())
+  createdAt                 DateTime  @default(now())
+  username                  String?   @unique
+  password                  String?
+  email                     String    @unique
+  resetPasswordToken        String?
+  resetPasswordExpires      DateTime?
+  registrationToken         String?
+  registrationTokenExpires  DateTime?
+  isOwner                   Boolean   @default(false)
+  isOnboarded               Boolean   @default(false)
+  isActive                  Boolean   @default(true)
+  role                      String    @default("USER")
+  employeeId                String?   @unique
+  chatStatus                String?
+  lastSeenAt                DateTime?
+  doNotDisturb              String    @default("No")
+  isSubscribed              String    @default("Yes")
+  isShowNotification        Boolean   @default(false)
+  score                     Int       @default(0)
+  appId                     String?
+  code                      String?
+
+  // Profile details inlined for strict relation structure
+  avatar            String?
+  coverPhoto        String?
+  shortName         String?
+  fullName          String?
+  birthDate         DateTime?
+  workStartedDate   DateTime?
+  position          String?
+  location          String?
+  description       String?
+  operatorPhone     String?
+  firstName         String?
+  middleName        String?
+  lastName          String?
+
+  // Relational IDs stored as arrays
+  onboardedPlugins       String[]  @default([])
+  departmentIds          String[]  @default([])
+  branchIds              String[]  @default([])
+  positionIds            String[]  @default([])
+  brandIds               String[]  @default([])
+  groupIds               String[]  @default([])
+  deviceTokens           String[]  @default([])
+  permissionGroupIds     String[]  @default([])
+  starredConversationIds String[]  @default([])
+
+  // Dynamic JSON structures
+  emailSignatures   Json?     @default("[]")
+  links             Json?     @default("{}")
+  customFieldsData  Json?     @default("[]")
+  
+  // Dynamic JSONB properties block for plugin extensibility
+  properties        Json      @default("{}")
+
+  @@map("users")
+}
+
+model UserMovement {
+  id            String   @id @default(uuid())
+  contentType   String
+  contentTypeId String
+  userId        String
+  createdBy     String
+  isActive      Boolean  @default(true)
+  status        String   @default("CREATED")
+  createdAt     DateTime @default(now())
+
+  @@map("user_movements")
+}
+
+model Brand {
+  id          String   @id @default(uuid())
+  code        String
+  name        String
+  description String?
+  userId      String
+  emailConfig Json?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("brands")
+}
+
+model Structure {
+  id           String    @id @default(uuid())
+  title        String
+  code         String?   @unique
+  description  String?
+  supervisorId String?
+  website      String?
+  phoneNumber  String?
+  email        String?
+  address      String?
+  links        Json?
+  coordinate   Json?
+  image        Json?
+  updatedBy    String?
+  updatedAt    DateTime?
+  createdBy    String?
+  createdAt    DateTime  @default(now())
+
+  @@map("structures")
+}
+
+model Department {
+  id           String    @id @default(uuid())
+  title        String
+  code         String?   @unique
+  description  String?
+  supervisorId String?
+  parentId     String?
+  order        String?
+  status       String    @default("active")
+  workhours    Json?
+  updatedBy    String?
+  updatedAt    DateTime?
+  createdBy    String?
+  createdAt    DateTime  @default(now())
+
+  @@map("departments")
+}
+
+model Unit {
+  id           String    @id @default(uuid())
+  title        String
+  code         String?   @unique
+  description  String?
+  departmentId String?
+  supervisorId String?
+  userIds      String[]  @default([])
+  updatedBy    String?
+  updatedAt    DateTime?
+  createdBy    String?
+  createdAt    DateTime  @default(now())
+
+  @@map("units")
+}
+
+model Branch {
+  id           String    @id @default(uuid())
+  title        String
+  code         String?   @unique
+  parentId     String?
+  website      String?
+  phoneNumber  String?
+  email        String?
+  address      String?
+  links        Json?
+  coordinate   Json?
+  image        Json?
+  order        String?
+  status       String    @default("active")
+  supervisorId String?
+  radius       Float?
+  workhours    Json?
+  updatedBy    String?
+  updatedAt    DateTime?
+  createdBy    String?
+  createdAt    DateTime  @default(now())
+
+  @@map("branches")
+}
+
+model Position {
+  id        String    @id @default(uuid())
+  title     String
+  code      String?   @unique
+  parentId  String?
+  order     String?
+  userIds   String[]  @default([])
+  status    String    @default("active")
+  updatedBy String?
+  updatedAt DateTime?
+  createdBy String?
+  createdAt DateTime  @default(now())
+
+  @@map("positions")
+}
+
+model Config {
+  id    String @id @default(uuid())
+  code  String @unique
+  value Json?
+
+  @@map("configs")
+}
+
+model Product {
+  id                 String    @id @default(uuid())
+  name               String
+  shortName          String?
+  code               String    @unique
+  categoryId         String
+  type               String    @default("product")
+  tagIds             String[]  @default([])
+  barcodes           String[]  @default([])
+  variants           Json?
+  barcodeDescription String?
+  description        String?
+  unitPrice          Float?
+  customFieldsData   Json?     @default("[]")
+  propertiesData     Json?     @default("{}")
+  attachment         Json?
+  attachmentMore     Json?     @default("[]")
+  status             String    @default("active")
+  vendorId           String?
+  scopeBrandIds      String[]  @default([])
+  mergedIds          String[]  @default([])
+  uom                String?
+  subUoms            Json?     @default("[]")
+  sameMasks          String[]  @default([])
+  sameDefault        String[]  @default([])
+  currency           String?
+  pdfAttachment      Json?
+  inventories        Json?
+  discounts          Json?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  @@map("products")
+}
+
+model ProductCategory {
+  id            String    @id @default(uuid())
+  name          String
+  code          String    @unique
+  order         String
+  parentId      String?
+  description   String?
+  meta          String?
+  scopeBrandIds String[]  @default([])
+  attachment    Json?
+  status        String    @default("active")
+  maskType      String?
+  mask          Json?
+  isSimilarity  Boolean?
+  similarities  Json?     @default("[]")
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@map("product_categories")
+}
+
+model Package {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  coverImage  String?
+  products    Json     @default("[]")
+  price       Float?
+  percent     Float?
+  status      String   @default("active")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("product_packages")
+}
+
+model Uom {
+  id                 String   @id @default(uuid())
+  name               String
+  code               String   @unique
+  isForSubscription  Boolean?
+  subscriptionConfig Json?
+  timely             String?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@map("uoms")
+}
+
+model ProductsConfig {
+  id    String @id @default(uuid())
+  code  String @unique
+  value Json
+
+  @@map("products_configs")
+}
+
+model ProductRule {
+  id                 String   @id @default(uuid())
+  categoryIds        String[] @default([])
+  excludeCategoryIds String[] @default([])
+  productIds         String[] @default([])
+  excludeProductIds  String[] @default([])
+  tagIds             String[] @default([])
+  excludeTagIds      String[] @default([])
+  unitPrice          Float
+  bundleId           String
+  name               String
+
+  @@map("product_rules")
+}
+
+model Company {
+  id               String    @id @default(uuid())
+  primaryName      String?
+  names            String[]  @default([])
+  avatar           String?
+  size             Int?
+  industry         String[]  @default([])
+  website          String?
+  parentCompanyId  String?
+  primaryEmail     String?
+  emails           String[]  @default([])
+  primaryPhone     String?
+  phones           String[]  @default([])
+  primaryAddress   Json?
+  addresses        Json?     @default("[]")
+  ownerId          String?
+  status           String    @default("Active")
+  businessType     String?
+  description      String?
+  employees        Int?
+  doNotDisturb     String    @default("No")
+  isSubscribed     String    @default("Yes")
+  links            Json?     @default("{}")
+  tagIds           String[]  @default([])
+  mergedIds        String[]  @default([])
+  customFieldsData Json?     @default("[]")
+  propertiesData   Json?     @default("{}")
+  trackedData      Json?     @default("[]")
+  searchText       String?
+  code             String?
+  location         String?
+  score            Float?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  @@map("companies")
+}
+
+model Customer {
+  id                    String    @id @default(uuid())
+  state                 String    @default("visitor")
+  avatar                String?
+  firstName             String?
+  lastName              String?
+  middleName            String?
+  birthDate             DateTime?
+  sex                   Int       @default(0)
+  primaryEmail          String?
+  emails                String[]  @default([])
+  emailValidationStatus String    @default("unknown")
+  primaryPhone          String?
+  phones                String[]  @default([])
+  primaryAddress        Json?
+  addresses             Json?     @default("[]")
+  phoneValidationStatus String    @default("unknown")
+  status                String    @default("Active")
+  description           String?
+  doNotDisturb          String    @default("No")
+  isSubscribed          String    @default("Yes")
+  links                 Json?     @default("{}")
+  code                  String?
+  tagIds                String[]  @default([])
+  searchText            String?
+  ownerId               String?
+  position              String?
+  department            String?
+  leadStatus            String?
+  hasAuthority          String    @default("No")
+  relatedIntegrationIds String[]  @default([])
+  integrationId         String?
+  mergedIds             String[]  @default([])
+  trackedData           Json?     @default("[]")
+  customFieldsData      Json?     @default("[]")
+  propertiesData        Json?     @default("{}")
+  location              Json?
+  visitorContactInfo    Json?
+  deviceTokens          String[]  @default([])
+  isOnline              Boolean?
+  lastSeenAt            DateTime?
+  sessionCount          Int?
+  visitorId             String?
+  data                  Json?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@map("customers")
+}
+
+model Tag {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  colorCode   String?
+  parentId    String?
+  relatedIds  String[] @default([])
+  isGroup     Boolean  @default(false)
+  type        String?
+  description String?
+  objectCount Int?
+  order       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("tags")
+}
+
+model InternalNote {
+  id            String   @id @default(uuid())
+  contentType   String
+  contentTypeId String
+  content       String?
+  createdUserId String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@map("internal_notes")
+}
+
+model Conformity {
+  id         String @id @default(uuid())
+  mainType   String
+  mainTypeId String
+  relType    String
+  relTypeId  String
+
+  @@map("conformities")
+}
+
+model Segment {
+  id                     String   @id @default(uuid())
+  contentType            String
+  name                   String?
+  description            String?
+  subOf                  String?
+  color                  String?
+  shouldWriteActivityLog Boolean?
+  conditionsConjunction  String   @default("and")
+  conditions             Json     @default("[]")
+  config                 Json?
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+
+  @@map("segments")
+}
+
+model Relation {
+  id        String   @id @default(uuid())
+  entities  Json     @default("[]")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("relations")
+}
+
+model App {
+  id         String    @id @default(uuid())
+  name       String?
+  token      String?
+  status     String    @default("active")
+  lastUsedAt DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  @@map("app_tokens")
+}
+
+model OAuthClientApp {
+  id           String    @id @default(uuid())
+  name         String
+  logo         String?
+  description  String?
+  clientId     String    @unique
+  type         String    @default("public")
+  redirectUrls String[]  @default([])
+  secretHash   String?
+  status       String    @default("active")
+  lastUsedAt   DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@map("oauth_client_apps")
+}
+
+model Field {
+  id            String   @id @default(uuid())
+  name          String
+  code          String
+  groupId       String
+  contentType   String
+  contentTypeId String?
+  type          String
+  order         Int?
+  logics        Json?    @default("[]")
+  validations   Json?    @default("{}")
+  configs       Json?    @default("{}")
+  options       Json?    @default("[]")
+  icon          String?
+  createdBy     String?
+  updatedBy     String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@map("fields")
+}
+
+model FieldGroup {
+  id          String   @id @default(uuid())
+  name        String
+  code        String
+  description String?
+  contentType String?
+  order       Int?
+  logics      Json?    @default("[]")
+  configs     Json?    @default("{}")
+  createdBy   String?
+  updatedBy   String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("fields_groups")
+}
+
+model Form {
+  id            String    @id @default(uuid())
+  name          String
+  title         String?
+  code          String?   @unique
+  type          String
+  description   String?
+  numberOfPages Int?
+  buttonText    String?
+  tagIds        String[]  @default([])
+  departmentIds String[]  @default([])
+  languageCode  String?
+  visibility    String?
+  status        String    @default("active")
+  brandId       String?
+  leadData      Json?     @default("{}")
+  integrationId String?
+  createdUserId String?
+  createdDate   DateTime  @default(now())
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@map("forms")
+}
+
+model FormSubmission {
+  id            String   @id @default(uuid())
+  customerId    String?
+  userId        String?
+  contentType   String?
+  contentTypeId String?
+  formId        String?
+  formFieldId   String?
+  value         Json?    @default("{}")
+  submittedAt   DateTime @default(now())
+  groupId       String?
+
+  @@map("form_submissions")
+}
+
+model Favorite {
+  id        String   @id @default(uuid())
+  type      String
+  path      String
+  userId    String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("favorites")
+}
+
+model Document {
+  id            String   @id @default(uuid())
+  createdUserId String?
+  contentType   String?
+  subType       String?
+  name          String?
+  content       String?
+  replacer      String?
+  code          String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@map("documents")
+}

@@ -217,3 +217,69 @@ export const loadOAuthClientAppClass = (
 
   return oauthClientAppSchema;
 };
+
+// ================= PRISMA POSTGRESQL ADAPTER =================
+import { prisma } from 'erxes-api-shared/utils';
+import { createPrismaAdapter } from '~/utils/prismaAdapter';
+
+const OAUTH_CLIENT_ARRAY_FIELDS = new Set(['redirectUrls']);
+
+function mapPrismaOAuthClientAppToMongoose(oa: any): any {
+  if (!oa) return null;
+  return {
+    ...oa,
+    _id: oa.id,
+    redirectUrls: oa.redirectUrls || [],
+    toObject() { return this; },
+    toJSON() { return this; },
+    async updateOne(update: any) {
+      const data = mapMongooseUpdateToPrismaOAuthClientApp(update);
+      return prisma.oAuthClientApp.update({ where: { id: oa.id }, data });
+    },
+    async deleteOne() {
+      return prisma.oAuthClientApp.delete({ where: { id: oa.id } });
+    }
+  };
+}
+
+function mapMongooseToPrismaOAuthClientApp(doc: any): any {
+  if (!doc) return {};
+  const mapped = { ...doc };
+  if (doc._id) {
+    mapped.id = doc._id;
+    delete mapped._id;
+  }
+  return mapped;
+}
+
+function mapMongooseUpdateToPrismaOAuthClientApp(update: any): any {
+  if (!update) return {};
+  const data: any = {};
+  if (update.$set) {
+    Object.assign(data, mapMongooseToPrismaOAuthClientApp(update.$set));
+  }
+  if (!update.$set) {
+    Object.assign(data, mapMongooseToPrismaOAuthClientApp(update));
+  }
+  return data;
+}
+
+export const loadPrismaOAuthClientApps = (
+  models: IModels,
+  coreEventHandlers: EventDispatcherReturn,
+) => {
+  const origSchema = loadOAuthClientAppClass(models, coreEventHandlers);
+  const origStatics = (origSchema as any).statics || {};
+
+  const modelAdapter = createPrismaAdapter(
+    prisma.oAuthClientApp,
+    mapPrismaOAuthClientAppToMongoose,
+    mapMongooseToPrismaOAuthClientApp,
+    mapMongooseUpdateToPrismaOAuthClientApp,
+    OAUTH_CLIENT_ARRAY_FIELDS
+  );
+
+  Object.assign(modelAdapter, origStatics);
+
+  return modelAdapter as any;
+};

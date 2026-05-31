@@ -223,3 +223,70 @@ export const loadProductCategoryClass = (
 
   return productCategorySchema;
 };
+
+// ================= PRISMA POSTGRESQL ADAPTER =================
+import { prisma } from 'erxes-api-shared/utils';
+import { createPrismaAdapter } from '~/utils/prismaAdapter';
+
+function mapPrismaProductCategoryToMongoose(c: any): any {
+  if (!c) return null;
+  return {
+    ...c,
+    _id: c.id,
+    scopeBrandIds: c.scopeBrandIds || [],
+    toObject() { return this; },
+    toJSON() { return this; },
+    async updateOne(update: any) {
+      const data = mapMongooseUpdateToPrismaProductCategory(update);
+      return prisma.productCategory.update({ where: { id: c.id }, data });
+    },
+    async deleteOne() {
+      return prisma.productCategory.delete({ where: { id: c.id } });
+    }
+  };
+}
+function mapMongooseToPrismaProductCategory(doc: any): any {
+  if (!doc) return {};
+  const mapped = { ...doc };
+  if (doc._id) {
+    mapped.id = doc._id;
+    delete mapped._id;
+  }
+  return mapped;
+}
+function mapMongooseUpdateToPrismaProductCategory(update: any): any {
+  if (!update) return {};
+  const data: any = {};
+  if (update.$set) {
+    Object.assign(data, mapMongooseToPrismaProductCategory(update.$set));
+  }
+  if (!update.$set) {
+    Object.assign(data, mapMongooseToPrismaProductCategory(update));
+  }
+  return data;
+}
+
+export const loadPrismaProductCategories = (
+  models: IModels,
+  subdomain: string,
+  coreEventHandlers: (
+    moduleName: string,
+    collectionName: string,
+  ) => EventDispatcherReturn,
+) => {
+  const origSchema = loadProductCategoryClass(models, subdomain, coreEventHandlers('products', 'product_categories'));
+  const origStatics = (origSchema as any).statics || {};
+
+  const modelAdapter = createPrismaAdapter(
+    prisma.productCategory,
+    mapPrismaProductCategoryToMongoose,
+    mapMongooseToPrismaProductCategory,
+    mapMongooseUpdateToPrismaProductCategory,
+    new Set(['scopeBrandIds'])
+  );
+
+  Object.assign(modelAdapter, origStatics);
+
+  return modelAdapter as any;
+};
+

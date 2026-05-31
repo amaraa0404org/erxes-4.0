@@ -403,3 +403,65 @@ export const loadConformityClass = (models: IModels, subdomain: string) => {
 
   return conformitySchema;
 };
+
+// ================= PRISMA POSTGRESQL ADAPTER =================
+import { prisma } from 'erxes-api-shared/utils';
+import { createPrismaAdapter } from '~/utils/prismaAdapter';
+
+const CONFORMITY_ARRAY_FIELDS = new Set<string>();
+
+function mapPrismaConformityToMongoose(conf: any): any {
+  if (!conf) return null;
+  return {
+    ...conf,
+    _id: conf.id,
+    toObject() { return this; },
+    toJSON() { return this; },
+    async updateOne(update: any) {
+      const data = mapMongooseUpdateToPrismaConformity(update);
+      return prisma.conformity.update({ where: { id: conf.id }, data });
+    },
+    async deleteOne() {
+      return prisma.conformity.delete({ where: { id: conf.id } });
+    }
+  };
+}
+
+function mapMongooseToPrismaConformity(doc: any): any {
+  if (!doc) return {};
+  const mapped = { ...doc };
+  if (doc._id) {
+    mapped.id = doc._id;
+    delete mapped._id;
+  }
+  return mapped;
+}
+
+function mapMongooseUpdateToPrismaConformity(update: any): any {
+  if (!update) return {};
+  const data: any = {};
+  if (update.$set) {
+    Object.assign(data, mapMongooseToPrismaConformity(update.$set));
+  }
+  if (!update.$set) {
+    Object.assign(data, mapMongooseToPrismaConformity(update));
+  }
+  return data;
+}
+
+export const loadPrismaConformities = (models: IModels, subdomain: string) => {
+  const origSchema = loadConformityClass(models, subdomain);
+  const origStatics = (origSchema as any).statics || {};
+
+  const modelAdapter = createPrismaAdapter(
+    prisma.conformity,
+    mapPrismaConformityToMongoose,
+    mapMongooseToPrismaConformity,
+    mapMongooseUpdateToPrismaConformity,
+    CONFORMITY_ARRAY_FIELDS
+  );
+
+  Object.assign(modelAdapter, origStatics);
+
+  return modelAdapter as any;
+};

@@ -419,3 +419,84 @@ export const loadProductClass = (
 
   return productSchema;
 };
+
+// ================= PRISMA POSTGRESQL ADAPTER =================
+import { prisma } from 'erxes-api-shared/utils';
+import { createPrismaAdapter } from '~/utils/prismaAdapter';
+
+const PRODUCT_ARRAY_FIELDS = new Set([
+  'tagIds',
+  'barcodes',
+  'scopeBrandIds',
+  'mergedIds',
+  'sameMasks',
+  'sameDefault'
+]);
+
+function mapPrismaProductToMongoose(p: any): any {
+  if (!p) return null;
+  return {
+    ...p,
+    _id: p.id,
+    tagIds: p.tagIds || [],
+    barcodes: p.barcodes || [],
+    scopeBrandIds: p.scopeBrandIds || [],
+    mergedIds: p.mergedIds || [],
+    sameMasks: p.sameMasks || [],
+    sameDefault: p.sameDefault || [],
+    toObject() { return this; },
+    toJSON() { return this; },
+    async updateOne(update: any) {
+      const data = mapMongooseUpdateToPrismaProduct(update);
+      return prisma.product.update({ where: { id: p.id }, data });
+    },
+    async deleteOne() {
+      return prisma.product.delete({ where: { id: p.id } });
+    }
+  };
+}
+function mapMongooseToPrismaProduct(doc: any): any {
+  if (!doc) return {};
+  const mapped = { ...doc };
+  if (doc._id) {
+    mapped.id = doc._id;
+    delete mapped._id;
+  }
+  return mapped;
+}
+function mapMongooseUpdateToPrismaProduct(update: any): any {
+  if (!update) return {};
+  const data: any = {};
+  if (update.$set) {
+    Object.assign(data, mapMongooseToPrismaProduct(update.$set));
+  }
+  if (!update.$set) {
+    Object.assign(data, mapMongooseToPrismaProduct(update));
+  }
+  return data;
+}
+
+export const loadPrismaProducts = (
+  models: IModels,
+  subdomain: string,
+  coreEventHandlers: (
+    moduleName: string,
+    collectionName: string,
+  ) => EventDispatcherReturn,
+) => {
+  const origSchema = loadProductClass(models, subdomain, coreEventHandlers('products', 'products'));
+  const origStatics = (origSchema as any).statics || {};
+
+  const modelAdapter = createPrismaAdapter(
+    prisma.product,
+    mapPrismaProductToMongoose,
+    mapMongooseToPrismaProduct,
+    mapMongooseUpdateToPrismaProduct,
+    PRODUCT_ARRAY_FIELDS
+  );
+
+  Object.assign(modelAdapter, origStatics);
+
+  return modelAdapter as any;
+};
+

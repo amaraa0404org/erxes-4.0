@@ -106,3 +106,69 @@ export const loadAppClass = (
 
   return appSchema;
 };
+
+// ================= PRISMA POSTGRESQL ADAPTER =================
+import { prisma } from 'erxes-api-shared/utils';
+import { createPrismaAdapter } from '~/utils/prismaAdapter';
+
+const APP_ARRAY_FIELDS = new Set<string>();
+
+function mapPrismaAppToMongoose(a: any): any {
+  if (!a) return null;
+  return {
+    ...a,
+    _id: a.id,
+    toObject() { return this; },
+    toJSON() { return this; },
+    async updateOne(update: any) {
+      const data = mapMongooseUpdateToPrismaApp(update);
+      return prisma.app.update({ where: { id: a.id }, data });
+    },
+    async deleteOne() {
+      return prisma.app.delete({ where: { id: a.id } });
+    }
+  };
+}
+
+function mapMongooseToPrismaApp(doc: any): any {
+  if (!doc) return {};
+  const mapped = { ...doc };
+  if (doc._id) {
+    mapped.id = doc._id;
+    delete mapped._id;
+  }
+  return mapped;
+}
+
+function mapMongooseUpdateToPrismaApp(update: any): any {
+  if (!update) return {};
+  const data: any = {};
+  if (update.$set) {
+    Object.assign(data, mapMongooseToPrismaApp(update.$set));
+  }
+  if (!update.$set) {
+    Object.assign(data, mapMongooseToPrismaApp(update));
+  }
+  return data;
+}
+
+export const loadPrismaApps = (
+  models: IModels,
+  coreEventHandlers: EventDispatcherReturn,
+  subdomain: string,
+) => {
+  const origSchema = loadAppClass(models, coreEventHandlers, subdomain);
+  const origStatics = (origSchema as any).statics || {};
+
+  const modelAdapter = createPrismaAdapter(
+    prisma.app,
+    mapPrismaAppToMongoose,
+    mapMongooseToPrismaApp,
+    mapMongooseUpdateToPrismaApp,
+    APP_ARRAY_FIELDS
+  );
+
+  Object.assign(modelAdapter, origStatics);
+
+  return modelAdapter as any;
+};

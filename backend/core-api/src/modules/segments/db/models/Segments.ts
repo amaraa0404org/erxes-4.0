@@ -162,3 +162,65 @@ export const loadSegmentClass = (models: IModels) => {
 
   return segmentSchema;
 };
+
+// ================= PRISMA POSTGRESQL ADAPTER =================
+import { prisma } from 'erxes-api-shared/utils';
+import { createPrismaAdapter } from '~/utils/prismaAdapter';
+
+const SEGMENT_ARRAY_FIELDS = new Set<string>();
+
+function mapPrismaSegmentToMongoose(seg: any): any {
+  if (!seg) return null;
+  return {
+    ...seg,
+    _id: seg.id,
+    toObject() { return this; },
+    toJSON() { return this; },
+    async updateOne(update: any) {
+      const data = mapMongooseUpdateToPrismaSegment(update);
+      return prisma.segment.update({ where: { id: seg.id }, data });
+    },
+    async deleteOne() {
+      return prisma.segment.delete({ where: { id: seg.id } });
+    }
+  };
+}
+
+function mapMongooseToPrismaSegment(doc: any): any {
+  if (!doc) return {};
+  const mapped = { ...doc };
+  if (doc._id) {
+    mapped.id = doc._id;
+    delete mapped._id;
+  }
+  return mapped;
+}
+
+function mapMongooseUpdateToPrismaSegment(update: any): any {
+  if (!update) return {};
+  const data: any = {};
+  if (update.$set) {
+    Object.assign(data, mapMongooseToPrismaSegment(update.$set));
+  }
+  if (!update.$set) {
+    Object.assign(data, mapMongooseToPrismaSegment(update));
+  }
+  return data;
+}
+
+export const loadPrismaSegments = (models: IModels) => {
+  const origSchema = loadSegmentClass(models);
+  const origStatics = (origSchema as any).statics || {};
+
+  const modelAdapter = createPrismaAdapter(
+    prisma.segment,
+    mapPrismaSegmentToMongoose,
+    mapMongooseToPrismaSegment,
+    mapMongooseUpdateToPrismaSegment,
+    SEGMENT_ARRAY_FIELDS
+  );
+
+  Object.assign(modelAdapter, origStatics);
+
+  return modelAdapter as any;
+};

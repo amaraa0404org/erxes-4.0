@@ -976,3 +976,84 @@ export const loadCustomerClass = (
 
   return customerSchema;
 };
+
+// ================= PRISMA POSTGRESQL ADAPTER =================
+import { prisma } from 'erxes-api-shared/utils';
+import { createPrismaAdapter } from '~/utils/prismaAdapter';
+
+const CUSTOMER_ARRAY_FIELDS = new Set([
+  'emails',
+  'phones',
+  'tagIds',
+  'relatedIntegrationIds',
+  'mergedIds',
+  'deviceTokens'
+]);
+
+function mapPrismaCustomerToMongoose(c: any): any {
+  if (!c) return null;
+  return {
+    ...c,
+    _id: c.id,
+    emails: c.emails || [],
+    phones: c.phones || [],
+    tagIds: c.tagIds || [],
+    relatedIntegrationIds: c.relatedIntegrationIds || [],
+    mergedIds: c.mergedIds || [],
+    deviceTokens: c.deviceTokens || [],
+    toObject() { return this; },
+    toJSON() { return this; },
+    async updateOne(update: any) {
+      const data = mapMongooseUpdateToPrismaCustomer(update);
+      return prisma.customer.update({ where: { id: c.id }, data });
+    },
+    async deleteOne() {
+      return prisma.customer.delete({ where: { id: c.id } });
+    }
+  };
+}
+function mapMongooseToPrismaCustomer(doc: any): any {
+  if (!doc) return {};
+  const mapped = { ...doc };
+  if (doc._id) {
+    mapped.id = doc._id;
+    delete mapped._id;
+  }
+  return mapped;
+}
+function mapMongooseUpdateToPrismaCustomer(update: any): any {
+  if (!update) return {};
+  const data: any = {};
+  if (update.$set) {
+    Object.assign(data, mapMongooseToPrismaCustomer(update.$set));
+  }
+  if (!update.$set) {
+    Object.assign(data, mapMongooseToPrismaCustomer(update));
+  }
+  return data;
+}
+
+export const loadPrismaCustomers = (
+  models: IModels,
+  subdomain: string,
+  coreEventHandlers: (
+    moduleName: string,
+    collectionName: string,
+  ) => EventDispatcherReturn,
+) => {
+  const origSchema = loadCustomerClass(models, subdomain, coreEventHandlers('contacts', 'customers'));
+  const origStatics = (origSchema as any).statics || {};
+
+  const modelAdapter = createPrismaAdapter(
+    prisma.customer,
+    mapPrismaCustomerToMongoose,
+    mapMongooseToPrismaCustomer,
+    mapMongooseUpdateToPrismaCustomer,
+    CUSTOMER_ARRAY_FIELDS
+  );
+
+  Object.assign(modelAdapter, origStatics);
+
+  return modelAdapter as any;
+};
+

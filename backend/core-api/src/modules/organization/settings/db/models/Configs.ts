@@ -233,3 +233,79 @@ export const loadConfigClass = (
 
   return configSchema;
 };
+
+// ================= PRISMA POSTGRESQL ADAPTER =================
+import { prisma } from 'erxes-api-shared/utils';
+import { createPrismaAdapter } from '~/utils/prismaAdapter';
+
+function mapPrismaConfigToMongoose(c: any): any {
+  if (!c) return null;
+  return {
+    ...c,
+    _id: c.id,
+    toObject() {
+      return this;
+    },
+    toJSON() {
+      return this;
+    },
+    async updateOne(update: any) {
+      const data = mapMongooseUpdateToPrismaConfig(update);
+      return prisma.config.update({
+        where: { id: c.id },
+        data,
+      });
+    },
+    async deleteOne() {
+      return prisma.config.delete({
+        where: { id: c.id },
+      });
+    }
+  };
+}
+
+function mapMongooseToPrismaConfig(doc: any): any {
+  if (!doc) return {};
+  const mapped = { ...doc };
+  if (doc._id) {
+    mapped.id = doc._id;
+    delete mapped._id;
+  }
+  return mapped;
+}
+
+function mapMongooseUpdateToPrismaConfig(update: any): any {
+  if (!update) return {};
+  const data: any = {};
+  if (update.$set) {
+    Object.assign(data, mapMongooseToPrismaConfig(update.$set));
+  }
+  if (!update.$set) {
+    Object.assign(data, mapMongooseToPrismaConfig(update));
+  }
+  return data;
+}
+
+export const loadPrismaConfigs = (
+  subdomain: string,
+  models: IModels,
+  coreEventHandlers: (
+    moduleName: string,
+    collectionName: string,
+  ) => EventDispatcherReturn,
+) => {
+  const origSchema = loadConfigClass(subdomain, models, coreEventHandlers('organization', 'configs'));
+  const origStatics = (origSchema as any).statics || {};
+
+  const modelAdapter = createPrismaAdapter(
+    prisma.config,
+    mapPrismaConfigToMongoose,
+    mapMongooseToPrismaConfig,
+    mapMongooseUpdateToPrismaConfig
+  );
+
+  Object.assign(modelAdapter, origStatics);
+
+  return modelAdapter as any;
+};
+

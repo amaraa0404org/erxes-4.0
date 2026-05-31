@@ -135,3 +135,62 @@ export const loadPackageClass = (models: IModels) => {
   packageSchema.loadClass(Package);
   return packageSchema;
 };
+
+// ================= PRISMA POSTGRESQL ADAPTER =================
+import { prisma } from 'erxes-api-shared/utils';
+import { createPrismaAdapter } from '~/utils/prismaAdapter';
+
+function mapPrismaPackageToMongoose(p: any): any {
+  if (!p) return null;
+  return {
+    ...p,
+    _id: p.id,
+    products: p.products || [],
+    toObject() { return this; },
+    toJSON() { return this; },
+    async updateOne(update: any) {
+      const data = mapMongooseUpdateToPrismaPackage(update);
+      return prisma.package.update({ where: { id: p.id }, data });
+    },
+    async deleteOne() {
+      return prisma.package.delete({ where: { id: p.id } });
+    }
+  };
+}
+function mapMongooseToPrismaPackage(doc: any): any {
+  if (!doc) return {};
+  const mapped = { ...doc };
+  if (doc._id) {
+    mapped.id = doc._id;
+    delete mapped._id;
+  }
+  return mapped;
+}
+function mapMongooseUpdateToPrismaPackage(update: any): any {
+  if (!update) return {};
+  const data: any = {};
+  if (update.$set) {
+    Object.assign(data, mapMongooseToPrismaPackage(update.$set));
+  }
+  if (!update.$set) {
+    Object.assign(data, mapMongooseToPrismaPackage(update));
+  }
+  return data;
+}
+
+export const loadPrismaPackages = (models: IModels) => {
+  const origSchema = loadPackageClass(models);
+  const origStatics = (origSchema as any).statics || {};
+
+  const modelAdapter = createPrismaAdapter(
+    prisma.package,
+    mapPrismaPackageToMongoose,
+    mapMongooseToPrismaPackage,
+    mapMongooseUpdateToPrismaPackage
+  );
+
+  Object.assign(modelAdapter, origStatics);
+
+  return modelAdapter as any;
+};
+

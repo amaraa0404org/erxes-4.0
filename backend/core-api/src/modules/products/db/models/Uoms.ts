@@ -174,3 +174,68 @@ export const loadUomClass = (
 
   return uomSchema;
 };
+
+// ================= PRISMA POSTGRESQL ADAPTER =================
+import { prisma } from 'erxes-api-shared/utils';
+import { createPrismaAdapter } from '~/utils/prismaAdapter';
+
+function mapPrismaUomToMongoose(u: any): any {
+  if (!u) return null;
+  return {
+    ...u,
+    _id: u.id,
+    toObject() { return this; },
+    toJSON() { return this; },
+    async updateOne(update: any) {
+      const data = mapMongooseUpdateToPrismaUom(update);
+      return prisma.uom.update({ where: { id: u.id }, data });
+    },
+    async deleteOne() {
+      return prisma.uom.delete({ where: { id: u.id } });
+    }
+  };
+}
+function mapMongooseToPrismaUom(doc: any): any {
+  if (!doc) return {};
+  const mapped = { ...doc };
+  if (doc._id) {
+    mapped.id = doc._id;
+    delete mapped._id;
+  }
+  return mapped;
+}
+function mapMongooseUpdateToPrismaUom(update: any): any {
+  if (!update) return {};
+  const data: any = {};
+  if (update.$set) {
+    Object.assign(data, mapMongooseToPrismaUom(update.$set));
+  }
+  if (!update.$set) {
+    Object.assign(data, mapMongooseToPrismaUom(update));
+  }
+  return data;
+}
+
+export const loadPrismaUoms = (
+  models: IModels,
+  subdomain: string,
+  coreEventHandlers: (
+    moduleName: string,
+    collectionName: string,
+  ) => EventDispatcherReturn,
+) => {
+  const origSchema = loadUomClass(models, subdomain, coreEventHandlers('products', 'uoms'));
+  const origStatics = (origSchema as any).statics || {};
+
+  const modelAdapter = createPrismaAdapter(
+    prisma.uom,
+    mapPrismaUomToMongoose,
+    mapMongooseToPrismaUom,
+    mapMongooseUpdateToPrismaUom
+  );
+
+  Object.assign(modelAdapter, origStatics);
+
+  return modelAdapter as any;
+};
+

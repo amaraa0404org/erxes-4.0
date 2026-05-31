@@ -271,3 +271,66 @@ export const loadRelationClass = (models: IModels) => {
 
   return relationSchema;
 };
+
+// ================= PRISMA POSTGRESQL ADAPTER =================
+import { prisma } from 'erxes-api-shared/utils';
+import { createPrismaAdapter } from '~/utils/prismaAdapter';
+
+const RELATION_ARRAY_FIELDS = new Set<string>();
+
+function mapPrismaRelationToMongoose(rel: any): any {
+  if (!rel) return null;
+  return {
+    ...rel,
+    _id: rel.id,
+    entities: rel.entities || [],
+    toObject() { return this; },
+    toJSON() { return this; },
+    async updateOne(update: any) {
+      const data = mapMongooseUpdateToPrismaRelation(update);
+      return prisma.relation.update({ where: { id: rel.id }, data });
+    },
+    async deleteOne() {
+      return prisma.relation.delete({ where: { id: rel.id } });
+    }
+  };
+}
+
+function mapMongooseToPrismaRelation(doc: any): any {
+  if (!doc) return {};
+  const mapped = { ...doc };
+  if (doc._id) {
+    mapped.id = doc._id;
+    delete mapped._id;
+  }
+  return mapped;
+}
+
+function mapMongooseUpdateToPrismaRelation(update: any): any {
+  if (!update) return {};
+  const data: any = {};
+  if (update.$set) {
+    Object.assign(data, mapMongooseToPrismaRelation(update.$set));
+  }
+  if (!update.$set) {
+    Object.assign(data, mapMongooseToPrismaRelation(update));
+  }
+  return data;
+}
+
+export const loadPrismaRelations = (models: IModels) => {
+  const origSchema = loadRelationClass(models);
+  const origStatics = (origSchema as any).statics || {};
+
+  const modelAdapter = createPrismaAdapter(
+    prisma.relation,
+    mapPrismaRelationToMongoose,
+    mapMongooseToPrismaRelation,
+    mapMongooseUpdateToPrismaRelation,
+    RELATION_ARRAY_FIELDS
+  );
+
+  Object.assign(modelAdapter, origStatics);
+
+  return modelAdapter as any;
+};

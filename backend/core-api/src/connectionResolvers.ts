@@ -1,8 +1,9 @@
-import { IAppModel, loadAppClass } from '@/apps/db/models/Apps';
+import { IAppModel, loadAppClass, loadPrismaApps } from '@/apps/db/models/Apps';
 import { IOAuthClientAppDocument } from '@/auth/db/definitions/oauthClientApps';
 import {
   IOAuthClientAppModel,
   loadOAuthClientAppClass,
+  loadPrismaOAuthClientApps,
 } from '@/auth/db/models/OAuthClientApps';
 import { IBundleConditionDocument, IBundleRuleDocument } from '@/bundle/@types';
 import {
@@ -16,29 +17,35 @@ import {
 import {
   IConformityModel,
   loadConformityClass,
+  loadPrismaConformities,
 } from '@/conformities/db/models/Conformities';
 import {
   ICompanyModel,
   loadCompanyClass,
+  loadPrismaCompanies,
 } from '@/contacts/db/models/Companies';
 import {
   ICustomerModel,
   loadCustomerClass,
+  loadPrismaCustomers,
 } from '@/contacts/db/models/Customers';
 import {
   IInternalNoteModel,
   loadInternalNoteClass,
+  loadPrismaInternalNotes,
 } from '@/internalNote/db/models/InternalNote';
 import { IInternalNoteDocument } from '@/internalNote/types';
 import { ILogModel, loadLogsClass } from '@/logs/db/models/Logs';
 import {
   IBrandModel,
   loadBrandClass,
+  loadPrismaBrands,
 } from '@/organization/brand/db/models/Brands';
 import { IFavoritesDocument } from '@/organization/settings/db/definitions/favorites';
 import {
   IFavoritesModel,
   loadFavoritesClass,
+  loadPrismaFavorites,
 } from '@/organization/settings/db/models/Favorites';
 import {
   IBranchDocument,
@@ -58,38 +65,48 @@ import {
   loadPositionClass,
   loadStructureClass,
   loadUnitClass,
+  loadPrismaBranches,
+  loadPrismaDepartments,
+  loadPrismaPositions,
+  loadPrismaStructures,
+  loadPrismaUnits,
 } from '@/organization/structure/db/models/Structure';
 import {
   IUserModel,
   IUserMovemmentModel,
-  loadUserClass,
-  loadUserMovemmentClass,
+  loadPrismaUsers,
+  loadPrismaUserMovements,
 } from '@/organization/team-member/db/models/Users';
 import { IProductRuleDocument } from '@/products/@types/rule';
 import { IPackageDocument } from '@/products/@types/package';
 import {
   IProductCategoryModel,
   loadProductCategoryClass,
+  loadPrismaProductCategories,
 } from '@/products/db/models/Categories';
 import {
   IProductsConfigModel,
   loadProductsConfigClass,
+  loadPrismaProductsConfigs,
 } from '@/products/db/models/Configs';
-import { IProductModel, loadProductClass } from '@/products/db/models/Products';
+import { IProductModel, loadProductClass, loadPrismaProducts } from '@/products/db/models/Products';
 import {
   IPackageModel,
   loadPackageClass,
+  loadPrismaPackages,
 } from '@/products/db/models/Packages';
 import {
   IProductRuleModel,
   loadProductRuleClass,
+  loadPrismaProductRules,
 } from '@/products/db/models/Rules';
-import { IUomModel, loadUomClass } from '@/products/db/models/Uoms';
+import { IUomModel, loadUomClass, loadPrismaUoms } from '@/products/db/models/Uoms';
 import {
   IRelationModel,
   loadRelationClass,
+  loadPrismaRelations,
 } from '@/relations/db/models/Relations';
-import { ITagModel, loadTagClass } from '@/tags/db/models/Tags';
+import { ITagModel, loadTagClass, loadPrismaTags } from '@/tags/db/models/Tags';
 import {
   AiAgentDocument,
   aiAgentSchema,
@@ -126,6 +143,7 @@ import mongoose, { Document, Model } from 'mongoose';
 import {
   IDocumentModel,
   loadDocumentClass,
+  loadPrismaDocuments,
 } from '~/modules/documents/db/models/Documents';
 import { IDocumentDocument } from '~/modules/documents/types';
 import {
@@ -142,6 +160,7 @@ import { IConfigDocument } from '~/modules/organization/settings/db/definitions/
 import {
   IConfigModel,
   loadConfigClass,
+  loadPrismaConfigs,
 } from '~/modules/organization/settings/db/models/Configs';
 import {
   IOAuthDeviceCodeDocument,
@@ -218,6 +237,8 @@ import {
   IFormSubmissionModel,
   loadFormClass,
   loadFormSubmissionClass,
+  loadPrismaForms,
+  loadPrismaFormSubmissions,
 } from './modules/forms/db/models/Forms';
 import {
   IEmailDeliveryModel,
@@ -235,15 +256,18 @@ import {
 import {
   IFieldModel,
   loadFieldClass,
+  loadPrismaFields,
 } from './modules/properties/db/models/Field';
 import {
   IFieldGroupModel,
   loadFieldGroupClass,
+  loadPrismaFieldGroups,
 } from './modules/properties/db/models/Group';
 import { ISegmentDocument } from './modules/segments/db/definitions/segments';
 import {
   ISegmentModel,
   loadSegmentClass,
+  loadPrismaSegments,
 } from './modules/segments/db/models/Segments';
 
 import { ICPNotificationDocument } from './modules/clientportal/types/cpNotification';
@@ -351,192 +375,60 @@ export const loadClasses = (
 
   const coreEventHandlers = eventHandlers('core');
 
-  models.Users = db.model<IUserDocument, IUserModel>(
-    'users',
-    loadUserClass(models, subdomain, coreEventHandlers),
+  models.Users = loadPrismaUsers(models, subdomain, coreEventHandlers);
+
+  models.Brands = loadPrismaBrands(subdomain, models, coreEventHandlers);
+
+  models.Conformities = loadPrismaConformities(models, subdomain);
+
+  models.Customers = loadPrismaCustomers(models, subdomain, coreEventHandlers);
+
+  models.Companies = loadPrismaCompanies(subdomain, models, coreEventHandlers);
+
+  models.UserMovements = loadPrismaUserMovements(models, subdomain, coreEventHandlers);
+
+  models.Configs = loadPrismaConfigs(subdomain, models, coreEventHandlers);
+
+  models.Tags = loadPrismaTags(models, subdomain, coreEventHandlers);
+
+  models.InternalNotes = loadPrismaInternalNotes(models, subdomain, coreEventHandlers);
+
+  models.Products = loadPrismaProducts(models, subdomain, coreEventHandlers);
+  models.Packages = loadPrismaPackages(models);
+  models.Uoms = loadPrismaUoms(models, subdomain, coreEventHandlers);
+  models.ProductsConfigs = loadPrismaProductsConfigs(models, subdomain, coreEventHandlers);
+  models.ProductCategories = loadPrismaProductCategories(models, subdomain, coreEventHandlers);
+
+  models.Structures = loadPrismaStructures(models);
+  models.Departments = loadPrismaDepartments(models, coreEventHandlers);
+  models.Units = loadPrismaUnits(models);
+  models.Branches = loadPrismaBranches(models, coreEventHandlers);
+  models.Positions = loadPrismaPositions(models, coreEventHandlers);
+  models.Apps = loadPrismaApps(
+    models,
+    coreEventHandlers('app_tokens', 'app_tokens'),
+    subdomain,
   );
 
-  models.Brands = db.model<IBrandDocument, IBrandModel>(
-    'brands',
-    loadBrandClass(
-      subdomain,
-      models,
-      coreEventHandlers('organization', 'brands'),
-    ),
+  models.OAuthClientApps = loadPrismaOAuthClientApps(
+    models,
+    coreEventHandlers('oauth_client_apps', 'oauth_client_apps'),
   );
 
-  models.Conformities = db.model<IConformityDocument, IConformityModel>(
-    'conformity',
-    loadConformityClass(models, subdomain),
-  );
+  models.Fields = loadPrismaFields(models);
 
-  models.Customers = db.model<ICustomerDocument, ICustomerModel>(
-    'customers',
-    loadCustomerClass(
-      models,
-      subdomain,
-      coreEventHandlers('contacts', 'customers'),
-    ),
-  );
+  models.FieldsGroups = loadPrismaFieldGroups(models);
 
-  models.Companies = db.model<ICompanyDocument, ICompanyModel>(
-    'companies',
-    loadCompanyClass(
-      subdomain,
-      models,
-      coreEventHandlers('contacts', 'companies'),
-    ),
-  );
+  models.Forms = loadPrismaForms(models);
+  models.FormSubmissions = loadPrismaFormSubmissions(models);
 
-  models.UserMovements = db.model<IUserMovementDocument, IUserMovemmentModel>(
-    'user_movements',
-    loadUserMovemmentClass(models, subdomain, coreEventHandlers),
-  );
+  models.Segments = loadPrismaSegments(models);
 
-  models.Configs = db.model<IConfigDocument, IConfigModel>(
-    'configs',
-    loadConfigClass(
-      subdomain,
-      models,
-      coreEventHandlers('organization', 'configs'),
-    ),
-  );
+  models.Relations = loadPrismaRelations(models);
 
-  models.Tags = db.model<ITagDocument, ITagModel>(
-    'tags',
-    loadTagClass(subdomain, models, coreEventHandlers('tags', 'tags')),
-  );
+  models.Favorites = loadPrismaFavorites(models);
 
-  models.InternalNotes = db.model<IInternalNoteDocument, IInternalNoteModel>(
-    'internal_notes',
-    loadInternalNoteClass(
-      models,
-      subdomain,
-      coreEventHandlers('internalNote', 'internal_notes'),
-    ),
-  );
-
-  models.Products = db.model<IProductDocument, IProductModel>(
-    'products',
-    loadProductClass(
-      models,
-      subdomain,
-      coreEventHandlers('products', 'products'),
-    ),
-  );
-
-  models.Packages = db.model<IPackageDocument, IPackageModel>(
-    'product_packages',
-    loadPackageClass(models),
-  );
-
-  models.Uoms = db.model<IUomDocument, IUomModel>(
-    'uoms',
-    loadUomClass(models, subdomain, coreEventHandlers('products', 'uoms')),
-  );
-
-  models.ProductsConfigs = db.model<
-    IProductsConfigDocument,
-    IProductsConfigModel
-  >(
-    'products_configs',
-    loadProductsConfigClass(
-      models,
-      subdomain,
-      coreEventHandlers('products', 'products_configs'),
-    ),
-  );
-
-  models.ProductCategories = db.model<
-    IProductCategoryDocument,
-    IProductCategoryModel
-  >(
-    'product_categories',
-    loadProductCategoryClass(
-      models,
-      subdomain,
-      coreEventHandlers('products', 'product_categories'),
-    ),
-  );
-
-  models.Structures = db.model<IStructureDocument, IStructureModel>(
-    'structures',
-    loadStructureClass(models),
-  );
-  models.Departments = db.model<IDepartmentDocument, IDepartmentModel>(
-    'departments',
-    loadDepartmentClass(
-      models,
-      coreEventHandlers('organization', 'departments'),
-    ),
-  );
-  models.Units = db.model<IUnitDocument, IUnitModel>(
-    'units',
-    loadUnitClass(models),
-  );
-  models.Branches = db.model<IBranchDocument, IBranchModel>(
-    'branches',
-    loadBranchClass(models, coreEventHandlers('organization', 'branches')),
-  );
-  models.Positions = db.model<IPositionDocument, IPositionModel>(
-    'positions',
-    loadPositionClass(models, coreEventHandlers('organization', 'positions')),
-  );
-  models.Apps = db.model<IAppDocument, IAppModel>(
-    'app_tokens',
-    loadAppClass(
-      models,
-      coreEventHandlers('app_tokens', 'app_tokens'),
-      subdomain,
-    ),
-  );
-
-  models.OAuthClientApps = db.model<
-    IOAuthClientAppDocument,
-    IOAuthClientAppModel
-  >(
-    'oauth_client_apps',
-    loadOAuthClientAppClass(
-      models,
-      coreEventHandlers('oauth_client_apps', 'oauth_client_apps'),
-    ),
-  );
-
-  models.Fields = db.model<IFieldDocument, IFieldModel>(
-    'properties_fields',
-    loadFieldClass(models),
-  );
-
-  models.FieldsGroups = db.model<IFieldGroupDocument, IFieldGroupModel>(
-    'properties_groups',
-    loadFieldGroupClass(models),
-  );
-
-  models.Forms = db.model<IForm, IFormModel>('forms', loadFormClass(models));
-  models.FormSubmissions = db.model<
-    IFormSubmissionDocument,
-    IFormSubmissionModel
-  >('form_submissions', loadFormSubmissionClass(models));
-
-  models.Segments = db.model<ISegmentDocument, ISegmentModel>(
-    'segments',
-    loadSegmentClass(models),
-  );
-
-  models.Relations = db.model<IRelationDocument, IRelationModel>(
-    'relations',
-    loadRelationClass(models),
-  );
-
-  models.Favorites = db.model<IFavoritesDocument, IFavoritesModel>(
-    'favorites',
-    loadFavoritesClass(models),
-  );
-
-  models.Documents = db.model<IDocumentDocument, IDocumentModel>(
-    'documents',
-    loadDocumentClass(models, subdomain),
-  );
+  models.Documents = loadPrismaDocuments(models, subdomain);
 
   models.Automations = db.model<IAutomationDocument, IAutomationModel>(
     'automations',
@@ -649,10 +541,7 @@ export const loadClasses = (
     loadBundleRuleClass(models, subdomain),
   );
 
-  models.ProductRules = db.model<IProductRuleDocument, IProductRuleModel>(
-    'product_rules',
-    loadProductRuleClass(models, subdomain),
-  );
+  models.ProductRules = loadPrismaProductRules(models, subdomain);
   models.PermissionGroups = db.model<
     IPermissionGroupDocument,
     IPermissionGroupModel
