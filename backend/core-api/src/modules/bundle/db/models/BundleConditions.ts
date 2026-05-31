@@ -63,3 +63,66 @@ export const loadBundleConditionClass = (
 
   return bundleConditionsSchema;
 };
+
+// ================= PRISMA POSTGRESQL ADAPTER =================
+import { prisma } from 'erxes-api-shared/utils';
+import { createPrismaAdapter } from '~/utils/prismaAdapter';
+
+const BUNDLECONDITION_ARRAY_FIELDS = new Set<string>([]);
+
+function mapPrismaBundleConditionToMongoose(doc: any): any {
+  if (!doc) return null;
+  return {
+    ...doc,
+    _id: doc.id,
+    toObject() { return this; },
+    toJSON() { return this; },
+    async updateOne(update: any) {
+      const data = mapMongooseUpdateToPrismaBundleCondition(update);
+      return prisma.bundleCondition.update({ where: { id: doc.id }, data });
+    },
+    async deleteOne() {
+      return prisma.bundleCondition.delete({ where: { id: doc.id } });
+    }
+  };
+}
+
+function mapMongooseToPrismaBundleCondition(doc: any): any {
+  if (!doc) return {};
+  const mapped = { ...doc };
+  if (doc._id) {
+    mapped.id = doc._id;
+    delete mapped._id;
+  }
+  return mapped;
+}
+
+function mapMongooseUpdateToPrismaBundleCondition(update: any): any {
+  if (!update) return {};
+  const data: any = {};
+  if (update.$set) {
+    Object.assign(data, mapMongooseToPrismaBundleCondition(update.$set));
+  }
+  if (!update.$set) {
+    Object.assign(data, mapMongooseToPrismaBundleCondition(update));
+  }
+  return data;
+}
+
+export const loadPrismaBundleConditions = (models: IModels, subdomain: string) => {
+  const origSchema = loadBundleConditionClass(models, subdomain);
+  const origStatics = (origSchema as any).statics || {};
+
+  const modelAdapter = createPrismaAdapter(
+    prisma.bundleCondition,
+    mapPrismaBundleConditionToMongoose,
+    mapMongooseToPrismaBundleCondition,
+    mapMongooseUpdateToPrismaBundleCondition,
+    BUNDLECONDITION_ARRAY_FIELDS
+  );
+
+  Object.assign(modelAdapter, origStatics);
+
+  return modelAdapter as any;
+};
+

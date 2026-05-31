@@ -481,3 +481,66 @@ export const loadEngageMessageClass = (models: IModels, subdomain: string) => {
 
   return engageMessageSchema;
 };
+
+// ================= PRISMA POSTGRESQL ADAPTER =================
+import { prisma } from 'erxes-api-shared/utils';
+import { createPrismaAdapter } from '~/utils/prismaAdapter';
+
+const ENGAGEMESSAGE_ARRAY_FIELDS = new Set<string>(['targetIds', 'messengerReceivedCustomerIds']);
+
+function mapPrismaEngageMessageToMongoose(doc: any): any {
+  if (!doc) return null;
+  return {
+    ...doc,
+    _id: doc.id,
+    toObject() { return this; },
+    toJSON() { return this; },
+    async updateOne(update: any) {
+      const data = mapMongooseUpdateToPrismaEngageMessage(update);
+      return prisma.engageMessage.update({ where: { id: doc.id }, data });
+    },
+    async deleteOne() {
+      return prisma.engageMessage.delete({ where: { id: doc.id } });
+    }
+  };
+}
+
+function mapMongooseToPrismaEngageMessage(doc: any): any {
+  if (!doc) return {};
+  const mapped = { ...doc };
+  if (doc._id) {
+    mapped.id = doc._id;
+    delete mapped._id;
+  }
+  return mapped;
+}
+
+function mapMongooseUpdateToPrismaEngageMessage(update: any): any {
+  if (!update) return {};
+  const data: any = {};
+  if (update.$set) {
+    Object.assign(data, mapMongooseToPrismaEngageMessage(update.$set));
+  }
+  if (!update.$set) {
+    Object.assign(data, mapMongooseToPrismaEngageMessage(update));
+  }
+  return data;
+}
+
+export const loadPrismaEngageMessages = (models: IModels, subdomain: string) => {
+  const origSchema = loadEngageMessageClass(models, subdomain);
+  const origStatics = (origSchema as any).statics || {};
+
+  const modelAdapter = createPrismaAdapter(
+    prisma.engageMessage,
+    mapPrismaEngageMessageToMongoose,
+    mapMongooseToPrismaEngageMessage,
+    mapMongooseUpdateToPrismaEngageMessage,
+    ENGAGEMESSAGE_ARRAY_FIELDS
+  );
+
+  Object.assign(modelAdapter, origStatics);
+
+  return modelAdapter as any;
+};
+

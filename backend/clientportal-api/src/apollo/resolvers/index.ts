@@ -1,7 +1,9 @@
+import { clientPortalQueries } from '../../modules/clientportal/graphql/resolvers/queries/clientPortal';
 import { cpUserQueries } from '../../modules/clientportal/graphql/resolvers/queries/cpUser';
 import { commentQueries } from '../../modules/clientportal/graphql/resolvers/queries/comment';
 import { cpNotificationQueries } from '../../modules/clientportal/graphql/resolvers/queries/cpNotification';
 
+import { clientPortalMutations } from '../../modules/clientportal/graphql/resolvers/mutations/clientPortal';
 import { cpUserMutations } from '../../modules/clientportal/graphql/resolvers/mutations/cpUser';
 import { commentMutations } from '../../modules/clientportal/graphql/resolvers/mutations/comment';
 import { cpNotificationMutations } from '../../modules/clientportal/graphql/resolvers/mutations/cpNotification';
@@ -15,6 +17,11 @@ const queries = {
   notifications: cpNotificationQueries.clientPortalNotifications,
   notificationDetail: cpNotificationQueries.clientPortalNotificationDetail,
   unreadNotificationCount: cpNotificationQueries.clientPortalUnreadNotificationCount,
+
+  ...clientPortalQueries,
+  ...cpUserQueries,
+  ...commentQueries,
+  ...cpNotificationQueries,
 };
 
 const mutations = {
@@ -49,6 +56,11 @@ const mutations = {
 
   markNotificationAsRead: cpNotificationMutations.clientPortalMarkNotificationAsRead,
   markAllNotificationsAsRead: cpNotificationMutations.clientPortalMarkAllNotificationsAsRead,
+
+  ...clientPortalMutations,
+  ...cpUserMutations,
+  ...commentMutations,
+  ...cpNotificationMutations,
 };
 
 const resolvers: any = {

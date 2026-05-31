@@ -207,3 +207,69 @@ export const loadExportClass = (
 
   return exportSchema;
 };
+
+// ================= PRISMA POSTGRESQL ADAPTER =================
+import { prisma } from 'erxes-api-shared/utils';
+import { createPrismaAdapter } from '~/utils/prismaAdapter';
+
+const EXPORT_ARRAY_FIELDS = new Set<string>(['ids', 'selectedFields']);
+
+function mapPrismaExportToMongoose(exp: any): any {
+  if (!exp) return null;
+  return {
+    ...exp,
+    _id: exp.id,
+    toObject() { return this; },
+    toJSON() { return this; },
+    async updateOne(update: any) {
+      const data = mapMongooseUpdateToPrismaExport(update);
+      return prisma.export.update({ where: { id: exp.id }, data });
+    },
+    async deleteOne() {
+      return prisma.export.delete({ where: { id: exp.id } });
+    }
+  };
+}
+
+function mapMongooseToPrismaExport(doc: any): any {
+  if (!doc) return {};
+  const mapped = { ...doc };
+  if (doc._id) {
+    mapped.id = doc._id;
+    delete mapped._id;
+  }
+  return mapped;
+}
+
+function mapMongooseUpdateToPrismaExport(update: any): any {
+  if (!update) return {};
+  const data: any = {};
+  if (update.$set) {
+    Object.assign(data, mapMongooseToPrismaExport(update.$set));
+  }
+  if (!update.$set) {
+    Object.assign(data, mapMongooseToPrismaExport(update));
+  }
+  return data;
+}
+
+export const loadPrismaExports = (
+  models: IModels,
+  coreEventHandlers: EventDispatcherReturn,
+) => {
+  const origSchema = loadExportClass(models, coreEventHandlers);
+  const origStatics = (origSchema as any).statics || {};
+
+  const modelAdapter = createPrismaAdapter(
+    prisma.export,
+    mapPrismaExportToMongoose,
+    mapMongooseToPrismaExport,
+    mapMongooseUpdateToPrismaExport,
+    EXPORT_ARRAY_FIELDS
+  );
+
+  Object.assign(modelAdapter, origStatics);
+
+  return modelAdapter as any;
+};
+

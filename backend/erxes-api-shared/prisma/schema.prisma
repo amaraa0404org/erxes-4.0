@@ -277,6 +277,7 @@ model Uom {
   isForSubscription  Boolean?
   subscriptionConfig Json?
   timely             String?
+  status             String?  @default("active")
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
 
@@ -592,3 +593,558 @@ model Document {
 
   @@map("documents")
 }
+
+model Import {
+  id                String    @id @default(uuid())
+  entityType        String
+  pluginName        String
+  moduleName        String
+  collectionName    String
+  fileKey           String
+  fileName          String
+  status            String    @default("pending")
+  totalRows         Int       @default(0)
+  processedRows     Int       @default(0)
+  successRows       Int       @default(0)
+  errorRows         Int       @default(0)
+  lastProcessedRow  Int       @default(0)
+  terminalError     Json?
+  importedIds       String[]
+  errorFileUrl      String?
+  startedAt         DateTime?
+  completedAt       DateTime?
+  userId            String
+  subdomain         String
+  jobId             String?
+  errorMessage      String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  @@map("imports")
+}
+
+model Export {
+  id                String    @id @default(uuid())
+  entityType        String
+  pluginName        String
+  moduleName        String
+  collectionName    String
+  fileName          String
+  status            String    @default("pending")
+  totalRows         Int       @default(0)
+  processedRows     Int       @default(0)
+  terminalError     Json?
+  fileFormat        String    @default("csv")
+  fileKey           String?
+  filters           Json?
+  ids               String[]
+  selectedFields    String[]
+  startedAt         DateTime?
+  completedAt       DateTime?
+  userId            String
+  subdomain         String
+  jobId             String?
+  errorMessage      String?
+  lastCursor        String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  @@map("exports")
+}
+
+model OrgWhiteLabel {
+  id                  String   @id @default("ORG_WHITE_LABEL")
+  orgLogo             String?
+  orgLoginText        String?
+  orgLoginDescription String?
+  orgFavicon          String?
+  orgShortDescription String?
+  orgShortName        String?
+  enabled             Boolean  @default(false)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  @@map("org_white_labels")
+}
+
+model ActivityLog {
+  id            String   @id @default(uuid())
+  createdAt     DateTime @default(now())
+  activityType  String
+  actorType     String
+  actor         Json
+  targetId      String
+  targetType    String
+  target        Json
+  contextType   String?
+  context       Json?
+  action        Json
+  changes       Json
+  metadata      Json?
+
+  @@index([targetId])
+  @@map("activity_logs")
+}
+
+model OAuthDeviceCode {
+  id             String    @id @default(uuid())
+  deviceCodeHash String    @unique
+  userCodeHash   String    @unique
+  clientId       String
+  scope          String
+  grantedScope   String?
+  userId         String?
+  status         String    @default("pending")
+  expiresAt      DateTime
+  approvedAt     DateTime?
+  lastPolledAt   DateTime?
+  failedAttempts Int       @default(0)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([deviceCodeHash])
+  @@index([userCodeHash])
+  @@index([clientId])
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("oauth_device_codes")
+}
+
+model OAuthRefreshToken {
+  id                  String    @id @default(uuid())
+  tokenHash           String    @unique
+  userId              String
+  clientId            String
+  scope               String
+  expiresAt           DateTime
+  revokedAt           DateTime?
+  replacedByTokenHash String?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  @@index([tokenHash])
+  @@index([userId])
+  @@index([clientId])
+  @@index([expiresAt])
+  @@index([revokedAt])
+  @@map("oauth_refresh_tokens")
+}
+
+model Notification {
+  id            String    @id @default(uuid())
+  title         String
+  message       String
+  type          String    @default("info")
+  userId        String
+  fromUserId    String?
+  contentType   String?
+  contentTypeId String?
+  isRead        Boolean   @default(false)
+  readAt        DateTime?
+  priority      String    @default("medium")
+  priorityLevel Int       @default(2)
+  metadata      Json?
+  action        String?
+  kind          String    @default("user")
+  isArchived    Boolean   @default(false)
+  expiresAt     DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([isRead])
+  @@index([action])
+  @@index([kind])
+  @@index([createdAt])
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([userId, isRead, createdAt(sort: Desc)])
+  @@index([contentType, contentTypeId])
+  @@index([expiresAt])
+  @@map("notifications")
+}
+
+model NotificationSetting {
+  id        String   @id @default(uuid())
+  userId    String   @unique
+  channels  Json     @default("{}")
+  events    Json     @default("{}")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@map("notification_settings")
+}
+
+model EmailDelivery {
+  id             String    @id @default(uuid())
+  notificationId String?
+  userId         String?
+  email          String
+  subject        String
+  content        String
+  provider       String
+  messageId      String?
+  status         String    @default("pending")
+  sentAt         DateTime?
+  error          String?
+  retryCount     Int       @default(0)
+  webhookData    Json?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([notificationId])
+  @@index([messageId])
+  @@index([status])
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([status, createdAt(sort: Desc)])
+  @@index([provider, status])
+  @@map("email_deliveries")
+}
+
+model Automation {
+  id        String   @id @default(uuid())
+  name      String
+  status    String   @default("draft")
+  triggers  Json     @default("[]")
+  actions   Json     @default("[]")
+  workflows Json     @default("[]")
+  createdAt DateTime @default(now())
+  createdBy String?
+  updatedAt DateTime @updatedAt
+  updatedBy String?
+  tagIds    String[] @default([])
+
+  @@map("automations")
+}
+
+model AutomationExecution {
+  id                String    @id @default(uuid())
+  createdAt         DateTime  @default(now())
+  modifiedAt        DateTime  @default(now())
+  automationId      String
+  triggerId         String
+  triggerType       String?
+  triggerConfig     Json?
+  nextActionId      String?
+  targetId          String
+  target            Json?
+  status            String    @default("active")
+  description       String
+  actions           Json      @default("[]")
+  startWaitingDate  DateTime?
+  waitingActionId   String?
+  responseActionId  String?
+  objToCheck        Json?
+
+  @@index([automationId])
+  @@index([triggerId])
+  @@index([targetId])
+  @@index([status])
+  @@map("automations_executions")
+}
+
+model AutomationEmailTemplate {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  content     String
+  createdBy   String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("automation_email_templates")
+}
+
+model ClientPortal {
+  id                       String   @id @default(uuid())
+  name                     String?
+  description              String?
+  url                      String?
+  domain                   String?
+  token                    String?  @unique
+  erxesIntegrationToken    String?
+  auth                     Json?
+  securityAuthConfig       Json?
+  smsProvidersConfig       Json?
+  verificationConfig       Json?
+  manualVerificationConfig Json?
+  enableManualVerification Boolean?
+  testUser                 Json?
+  firebaseConfig           Json?
+  createdAt                DateTime @default(now())
+  updatedAt                DateTime @updatedAt
+
+  @@map("client_portals")
+}
+
+model CPUser {
+  id                        String    @id @default(uuid())
+  username                  String?
+  email                     String?
+  phone                     String?
+  code                      String?
+  password                  String?
+  firstName                 String?
+  lastName                  String?
+  avatar                    String?
+  type                      String    @default("customer")
+  companyName               String?
+  companyRegistrationNumber String?
+  isVerified                Boolean   @default(false)
+  clientPortalId            String
+  erxesCompanyId            String?
+  erxesCustomerId           String?
+  isPhoneVerified           Boolean   @default(false)
+  isEmailVerified           Boolean   @default(false)
+  fcmTokens                 Json?     @default("[]")
+  actionCode                Json?
+  customFieldsData          Json?
+  verificationRequest       Json?
+  refreshTokens             Json?     @default("[]")
+  socialAuthProviders       Json?     @default("[]")
+  failedLoginAttempts       Int?
+  accountLockedUntil        DateTime?
+  lastLoginAt               DateTime?
+  primaryAuthMethod         String?
+  otpResendAttempts         Int?
+  otpResendLastAttempt      DateTime?
+  createdAt                 DateTime  @default(now())
+  updatedAt                 DateTime  @updatedAt
+
+  @@index([clientPortalId])
+  @@index([email])
+  @@index([phone])
+  @@map("client_portal_users")
+}
+
+model CPComment {
+  id        String   @id @default(uuid())
+  phone     String?
+  typeId    String
+  type      String
+  content   String?
+  parentId  String?
+  userId    String?
+  userType  String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([typeId])
+  @@map("client_portal_comments")
+}
+
+model CPNotification {
+  id             String    @id @default(uuid())
+  cpUserId       String
+  clientPortalId String
+  title          String
+  message        String
+  type           String    @default("info")
+  contentType    String?
+  contentTypeId  String?
+  isRead         Boolean   @default(false)
+  readAt         DateTime?
+  priority       String    @default("medium")
+  priorityLevel  Int       @default(2)
+  metadata       Json?
+  action         String?
+  kind           String    @default("user")
+  result         Json?
+  expiresAt      DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([cpUserId, createdAt(sort: Desc)])
+  @@index([clientPortalId, cpUserId, isRead])
+  @@index([contentType, contentTypeId, cpUserId])
+  @@index([action])
+  @@index([kind])
+  @@map("client_portal_notifications")
+}
+
+model EngageMessage {
+  id                           String   @id @default(uuid())
+  kind                         String
+  targetType                   String?
+  targetIds                    String[] @default([])
+  targetCount                  Int?
+  title                        String
+  fromUserId                   String
+  method                       String
+  isDraft                      Boolean
+  isLive                       Boolean
+  messengerReceivedCustomerIds String[] @default([])
+  email                        Json?
+  messenger                    Json?
+  notification                 Json?
+  lastRunAt                    DateTime?
+  runCount                     Int      @default(0)
+  status                       String?
+  progress                     Json?
+  totalCustomersCount          Int?
+  validCustomersCount          Int?
+  createdBy                    String
+  createdAt                    DateTime @default(now())
+  updatedAt                    DateTime @updatedAt
+
+  @@map("broadcast_engage_messages")
+}
+
+model Stats {
+  id               String   @id @default(uuid())
+  engageMessageId  String   @unique
+  createdAt        DateTime @default(now())
+  open             Int      @default(0)
+  click            Int      @default(0)
+  complaint        Int      @default(0)
+  delivery         Int      @default(0)
+  bounce           Int      @default(0)
+  reject           Int      @default(0)
+  send             Int      @default(0)
+  renderingfailure Int      @default(0)
+  total            Int      @default(0)
+
+  @@map("broadcast_stats")
+}
+
+model DeliveryReport {
+  id              String   @id @default(uuid())
+  customerId      String
+  mailId          String?
+  status          String?
+  engageMessageId String?
+  createdAt       DateTime @default(now())
+  email           String
+
+  @@index([customerId])
+  @@index([mailId])
+  @@index([status])
+  @@index([engageMessageId])
+  @@index([createdAt(sort: Desc)])
+  @@index([email])
+  @@map("broadcast_delivery_reports")
+}
+
+model BroadcastTrace {
+  id              String   @id @default(uuid())
+  createdAt       DateTime @default(now())
+  engageMessageId String
+  message         String
+  type            String
+
+  @@index([engageMessageId])
+  @@map("broadcast_traces")
+}
+
+model SmsRequest {
+  id              String   @id @default(uuid())
+  createdAt       DateTime @default(now())
+  engageMessageId String?
+  to              String?
+  requestData     String?
+  status          String?
+  responseData    String?
+  telnyxId        String?
+  statusUpdates   Json?    @default("[]")
+  errorMessages   String[] @default([])
+
+  @@map("broadcast_engage_sms_requests")
+}
+
+model AiAgent {
+  id          String   @id @default(uuid())
+  name        String
+  description String   @default("")
+  connection  Json
+  runtime     Json
+  context     Json
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("automations_ai_agents")
+}
+
+model BundleCondition {
+  id          String   @id @default(uuid())
+  code        String
+  name        String
+  userId      String
+  isDefault   Boolean? @default(false)
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("bundle_conditions")
+}
+
+model BundleRule {
+  id          String   @id @default(uuid())
+  code        String
+  name        String
+  description String?
+  rules       Json?    @default("[]")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("bundle_rules")
+}
+
+model PermissionGroup {
+  id          String   @id @default(uuid())
+  name        String?
+  description String?
+  permissions Json?    @default("[]")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("permission_groups")
+}
+
+model Template {
+  id              String   @id @default(uuid())
+  name            String
+  description     String?
+  contentType     String
+  content         Json
+  relatedContents Json?    @default("[]")
+  categoryIds     String[] @default([])
+  createdBy       String?
+  updatedBy       String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@map("templates")
+}
+
+model TemplateCategory {
+  id        String   @id @default(uuid())
+  name      String
+  parentId  String?
+  code      String
+  createdBy String?
+  updatedBy String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("template_categories")
+}
+
+model Log {
+  id          String   @id @default(uuid())
+  source      String?
+  status      String
+  createdAt   DateTime @default(now())
+  userId      String?
+  docId       String?
+  payload     Json?
+  action      String?
+  processId   String?
+  contentType String?
+
+  @@index([createdAt])
+  @@index([docId, createdAt(sort: Desc)])
+  @@index([contentType, createdAt(sort: Desc)])
+  @@map("logs")
+}
+
+
+

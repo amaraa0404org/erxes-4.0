@@ -122,6 +122,14 @@ export const types = `
     isVerified: Boolean
     clientPortalId: String
   }
+
+  type Customer @key(fields: "_id", resolvable: false) {
+    _id: String!
+  }
+
+  type Company @key(fields: "_id", resolvable: false) {
+    _id: String!
+  }
 `;
 
 const userRegisterParams = `

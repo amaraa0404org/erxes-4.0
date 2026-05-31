@@ -58,3 +58,66 @@ export const loadPermissionGroupClass = (models: IModels) => {
   permissionGroupSchema.loadClass(PermissionGroup);
   return permissionGroupSchema;
 };
+
+// ================= PRISMA POSTGRESQL ADAPTER =================
+import { prisma } from 'erxes-api-shared/utils';
+import { createPrismaAdapter } from '~/utils/prismaAdapter';
+
+const PERMISSIONGROUP_ARRAY_FIELDS = new Set<string>([]);
+
+function mapPrismaPermissionGroupToMongoose(doc: any): any {
+  if (!doc) return null;
+  return {
+    ...doc,
+    _id: doc.id,
+    toObject() { return this; },
+    toJSON() { return this; },
+    async updateOne(update: any) {
+      const data = mapMongooseUpdateToPrismaPermissionGroup(update);
+      return prisma.permissionGroup.update({ where: { id: doc.id }, data });
+    },
+    async deleteOne() {
+      return prisma.permissionGroup.delete({ where: { id: doc.id } });
+    }
+  };
+}
+
+function mapMongooseToPrismaPermissionGroup(doc: any): any {
+  if (!doc) return {};
+  const mapped = { ...doc };
+  if (doc._id) {
+    mapped.id = doc._id;
+    delete mapped._id;
+  }
+  return mapped;
+}
+
+function mapMongooseUpdateToPrismaPermissionGroup(update: any): any {
+  if (!update) return {};
+  const data: any = {};
+  if (update.$set) {
+    Object.assign(data, mapMongooseToPrismaPermissionGroup(update.$set));
+  }
+  if (!update.$set) {
+    Object.assign(data, mapMongooseToPrismaPermissionGroup(update));
+  }
+  return data;
+}
+
+export const loadPrismaPermissionGroups = (models: IModels) => {
+  const origSchema = loadPermissionGroupClass(models);
+  const origStatics = (origSchema as any).statics || {};
+
+  const modelAdapter = createPrismaAdapter(
+    prisma.permissionGroup,
+    mapPrismaPermissionGroupToMongoose,
+    mapMongooseToPrismaPermissionGroup,
+    mapMongooseUpdateToPrismaPermissionGroup,
+    PERMISSIONGROUP_ARRAY_FIELDS
+  );
+
+  Object.assign(modelAdapter, origStatics);
+
+  return modelAdapter as any;
+};
+

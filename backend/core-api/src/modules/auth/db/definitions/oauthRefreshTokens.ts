@@ -31,3 +31,61 @@ export const oauthRefreshTokenSchema = new Schema(
     timestamps: true,
   },
 );
+
+// ================= PRISMA POSTGRESQL ADAPTER =================
+import { prisma } from 'erxes-api-shared/utils';
+import { createPrismaAdapter } from '~/utils/prismaAdapter';
+
+const OAUTH_REFRESH_TOKEN_ARRAY_FIELDS = new Set<string>();
+
+function mapPrismaOAuthRefreshTokenToMongoose(token: any): any {
+  if (!token) return null;
+  return {
+    ...token,
+    _id: token.id,
+    toObject() { return this; },
+    toJSON() { return this; },
+    async updateOne(update: any) {
+      const data = mapMongooseUpdateToPrismaOAuthRefreshToken(update);
+      return prisma.oAuthRefreshToken.update({ where: { id: token.id }, data });
+    },
+    async deleteOne() {
+      return prisma.oAuthRefreshToken.delete({ where: { id: token.id } });
+    }
+  };
+}
+
+function mapMongooseToPrismaOAuthRefreshToken(doc: any): any {
+  if (!doc) return {};
+  const mapped = { ...doc };
+  if (doc._id) {
+    mapped.id = doc._id;
+    delete mapped._id;
+  }
+  return mapped;
+}
+
+function mapMongooseUpdateToPrismaOAuthRefreshToken(update: any): any {
+  if (!update) return {};
+  const data: any = {};
+  if (update.$set) {
+    Object.assign(data, mapMongooseToPrismaOAuthRefreshToken(update.$set));
+  }
+  if (!update.$set) {
+    Object.assign(data, mapMongooseToPrismaOAuthRefreshToken(update));
+  }
+  return data;
+}
+
+export const loadPrismaOAuthRefreshTokens = () => {
+  const modelAdapter = createPrismaAdapter(
+    prisma.oAuthRefreshToken,
+    mapPrismaOAuthRefreshTokenToMongoose,
+    mapMongooseToPrismaOAuthRefreshToken,
+    mapMongooseUpdateToPrismaOAuthRefreshToken,
+    OAUTH_REFRESH_TOKEN_ARRAY_FIELDS
+  );
+
+  return modelAdapter as any;
+};
+

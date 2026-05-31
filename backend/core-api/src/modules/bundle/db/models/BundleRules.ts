@@ -57,3 +57,66 @@ export const loadBundleRuleClass = (models: IModels, subdomain: string) => {
 
   return bundleRuleSchema;
 };
+
+// ================= PRISMA POSTGRESQL ADAPTER =================
+import { prisma } from 'erxes-api-shared/utils';
+import { createPrismaAdapter } from '~/utils/prismaAdapter';
+
+const BUNDLERULE_ARRAY_FIELDS = new Set<string>([]);
+
+function mapPrismaBundleRuleToMongoose(doc: any): any {
+  if (!doc) return null;
+  return {
+    ...doc,
+    _id: doc.id,
+    toObject() { return this; },
+    toJSON() { return this; },
+    async updateOne(update: any) {
+      const data = mapMongooseUpdateToPrismaBundleRule(update);
+      return prisma.bundleRule.update({ where: { id: doc.id }, data });
+    },
+    async deleteOne() {
+      return prisma.bundleRule.delete({ where: { id: doc.id } });
+    }
+  };
+}
+
+function mapMongooseToPrismaBundleRule(doc: any): any {
+  if (!doc) return {};
+  const mapped = { ...doc };
+  if (doc._id) {
+    mapped.id = doc._id;
+    delete mapped._id;
+  }
+  return mapped;
+}
+
+function mapMongooseUpdateToPrismaBundleRule(update: any): any {
+  if (!update) return {};
+  const data: any = {};
+  if (update.$set) {
+    Object.assign(data, mapMongooseToPrismaBundleRule(update.$set));
+  }
+  if (!update.$set) {
+    Object.assign(data, mapMongooseToPrismaBundleRule(update));
+  }
+  return data;
+}
+
+export const loadPrismaBundleRules = (models: IModels, subdomain: string) => {
+  const origSchema = loadBundleRuleClass(models, subdomain);
+  const origStatics = (origSchema as any).statics || {};
+
+  const modelAdapter = createPrismaAdapter(
+    prisma.bundleRule,
+    mapPrismaBundleRuleToMongoose,
+    mapMongooseToPrismaBundleRule,
+    mapMongooseUpdateToPrismaBundleRule,
+    BUNDLERULE_ARRAY_FIELDS
+  );
+
+  Object.assign(modelAdapter, origStatics);
+
+  return modelAdapter as any;
+};
+

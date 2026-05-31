@@ -73,10 +73,10 @@ export const loadUomClass = (
      * Remove uoms
      */
     public static async removeUoms(_ids: string[]) {
-      const uoms = await models.Uoms.find({
+      const uoms = await models.Products.find({
         uom: { $in: _ids },
       }).lean();
-      const uomIds = uoms.map((p) => p._id);
+      const uomIds = uoms.map((p) => p.uom);
 
       const usedIds: string[] = [];
       const unUsedIds: string[] = [];

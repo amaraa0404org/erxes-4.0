@@ -106,3 +106,66 @@ export const loadClientPortalClass = (models: IModels) => {
 
   return clientPortalSchema;
 };
+
+// ================= PRISMA POSTGRESQL ADAPTER =================
+import { prisma } from 'erxes-api-shared/utils';
+import { createPrismaAdapter } from '~/utils/prismaAdapter';
+
+const CLIENTPORTAL_ARRAY_FIELDS = new Set<string>([]);
+
+function mapPrismaClientPortalToMongoose(doc: any): any {
+  if (!doc) return null;
+  return {
+    ...doc,
+    _id: doc.id,
+    toObject() { return this; },
+    toJSON() { return this; },
+    async updateOne(update: any) {
+      const data = mapMongooseUpdateToPrismaClientPortal(update);
+      return prisma.clientPortal.update({ where: { id: doc.id }, data });
+    },
+    async deleteOne() {
+      return prisma.clientPortal.delete({ where: { id: doc.id } });
+    }
+  };
+}
+
+function mapMongooseToPrismaClientPortal(doc: any): any {
+  if (!doc) return {};
+  const mapped = { ...doc };
+  if (doc._id) {
+    mapped.id = doc._id;
+    delete mapped._id;
+  }
+  return mapped;
+}
+
+function mapMongooseUpdateToPrismaClientPortal(update: any): any {
+  if (!update) return {};
+  const data: any = {};
+  if (update.$set) {
+    Object.assign(data, mapMongooseToPrismaClientPortal(update.$set));
+  }
+  if (!update.$set) {
+    Object.assign(data, mapMongooseToPrismaClientPortal(update));
+  }
+  return data;
+}
+
+export const loadPrismaClientPortals = (models: IModels) => {
+  const origSchema = loadClientPortalClass(models);
+  const origStatics = (origSchema as any).statics || {};
+
+  const modelAdapter = createPrismaAdapter(
+    prisma.clientPortal,
+    mapPrismaClientPortalToMongoose,
+    mapMongooseToPrismaClientPortal,
+    mapMongooseUpdateToPrismaClientPortal,
+    CLIENTPORTAL_ARRAY_FIELDS
+  );
+
+  Object.assign(modelAdapter, origStatics);
+
+  return modelAdapter as any;
+};
+

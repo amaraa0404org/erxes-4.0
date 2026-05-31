@@ -8,11 +8,11 @@ import {
 import { IBundleConditionDocument, IBundleRuleDocument } from '@/bundle/@types';
 import {
   IBundleConditionModel,
-  loadBundleConditionClass,
+  loadPrismaBundleConditions,
 } from '@/bundle/db/models/BundleConditions';
 import {
   IBundleRuleModel,
-  loadBundleRuleClass,
+  loadPrismaBundleRules,
 } from '@/bundle/db/models/BundleRules';
 import {
   IConformityModel,
@@ -35,7 +35,7 @@ import {
   loadPrismaInternalNotes,
 } from '@/internalNote/db/models/InternalNote';
 import { IInternalNoteDocument } from '@/internalNote/types';
-import { ILogModel, loadLogsClass } from '@/logs/db/models/Logs';
+import { ILogModel, loadPrismaLogs } from '@/logs/db/models/Logs';
 import {
   IBrandModel,
   loadBrandClass,
@@ -150,11 +150,13 @@ import {
   IExportDocument,
   IExportModel,
   loadExportClass,
+  loadPrismaExports,
 } from '~/modules/import-export/db/models/Exports';
 import {
   IImportDocument,
   IImportModel,
   loadImportClass,
+  loadPrismaImports,
 } from '~/modules/import-export/db/models/Imports';
 import { IConfigDocument } from '~/modules/organization/settings/db/definitions/configs';
 import {
@@ -165,23 +167,25 @@ import {
 import {
   IOAuthDeviceCodeDocument,
   oauthDeviceCodeSchema,
+  loadPrismaOAuthDeviceCodes,
 } from '~/modules/auth/db/definitions/oauthDeviceCodes';
 import {
   IOAuthRefreshTokenDocument,
   oauthRefreshTokenSchema,
+  loadPrismaOAuthRefreshTokens,
 } from '~/modules/auth/db/definitions/oauthRefreshTokens';
 
 import {
   IAutomationEmailTemplateModel,
-  loadAutomationEmailTemplateClass,
+  loadPrismaAutomationEmailTemplates,
 } from './modules/automations/db/models/AutomationEmailTemplates';
 import {
   IAutomationModel,
-  loadClass as loadAutomationClass,
+  loadPrismaAutomations,
 } from './modules/automations/db/models/Automations';
 import {
   IExecutionModel,
-  loadClass as loadExecutionClass,
+  loadPrismaAutomationExecutions,
 } from './modules/automations/db/models/Executions';
 import {
   IDeliveryReportsDocument,
@@ -189,40 +193,40 @@ import {
   ISmsRequestDocument,
   IStatsDocument,
 } from './modules/broadcast/@types';
-import { deliveryReportsSchema } from './modules/broadcast/db/definitions/deliveryReports';
 import {
   IBroadcastTraceDocument,
   IBroadcastTraceModel,
-  loadBroadcastTraceClass,
+  loadPrismaBroadcastTraces,
 } from './modules/broadcast/db/models/BroadcastTraces';
 import {
   IDeliveryReportModel,
   IStatsModel,
-  loadStatsClass,
+  loadPrismaStats,
+  loadPrismaDeliveryReports,
 } from './modules/broadcast/db/models/DeliveryReports';
 import {
   IEngageMessageModel,
-  loadEngageMessageClass,
+  loadPrismaEngageMessages,
 } from './modules/broadcast/db/models/Engages';
 import {
   ISmsRequestModel,
-  loadSmsRequestClass,
+  loadPrismaSmsRequests,
 } from './modules/broadcast/db/models/SmsRequests';
 import {
   ICPNotificationModel,
-  loadCPNotificationClass,
+  loadPrismaCPNotifications,
 } from './modules/clientportal/db/models/CPNotification';
 import {
   ICPUserModel,
-  loadCPUserClass,
+  loadPrismaCPUsers,
 } from './modules/clientportal/db/models/CPUser';
 import {
   IClientPortalModel,
-  loadClientPortalClass,
+  loadPrismaClientPortals,
 } from './modules/clientportal/db/models/ClientPortal';
 import {
   ICPCommentsModel,
-  loadCommentClass,
+  loadPrismaCPComments,
 } from './modules/clientportal/db/models/Comment';
 import { IClientPortalDocument } from './modules/clientportal/types/clientPortal';
 import { ICPCommentDocument } from './modules/clientportal/types/comment';
@@ -243,11 +247,15 @@ import {
 import {
   IEmailDeliveryModel,
   loadEmailDeliveryClass,
+  loadPrismaEmailDeliveries,
 } from './modules/organization/team-member/db/models/EmailDeliveries';
+import { loadPrismaNotifications } from './modules/notifications/db/models/Notifications';
+import { loadPrismaNotificationSettings } from './modules/notifications/db/models/NotificationSettings';
 import { IOrgWhiteLabelDocument } from './modules/organization/whitelabel/@types/orgWhiteLabel';
 import {
   IOrgWhiteLabelModel,
   loadOrgWhiteLabelClass,
+  loadPrismaOrgWhiteLabel,
 } from './modules/organization/whitelabel/db/models/OrgWhiteLabel';
 import {
   IFieldDocument,
@@ -274,23 +282,25 @@ import { ICPNotificationDocument } from './modules/clientportal/types/cpNotifica
 
 import {
   IPermissionGroupModel,
-  loadPermissionGroupClass,
+  loadPrismaPermissionGroups,
 } from '@/permissions/db/models/Permissions';
 import {
   ITemplateCategoryModal,
-  loadTemplateCategoryClass,
+  loadPrismaTemplateCategories,
 } from '@/template/db/models/Category';
 import {
   ITemplateModal,
-  loadTemplateClass,
+  loadPrismaTemplates,
 } from '@/template/db/models/Template';
 import {
   ITemplateCategoryDocument,
   ITemplateDocument,
 } from '@/template/@types';
+import { loadPrismaAiAgents } from '@/automations/db/models/AiAgents';
 import {
   IActivityLogsModel,
   loadActivityLogsClass,
+  loadPrismaActivityLogs,
 } from '@/logs/db/models/ActivityLogs';
 
 export interface IModels {
@@ -430,151 +440,72 @@ export const loadClasses = (
 
   models.Documents = loadPrismaDocuments(models, subdomain);
 
-  models.Automations = db.model<IAutomationDocument, IAutomationModel>(
-    'automations',
-    loadAutomationClass(models),
+  models.Automations = loadPrismaAutomations(models);
+
+  models.AutomationExecutions = loadPrismaAutomationExecutions(models);
+
+  models.AutomationEmailTemplates = loadPrismaAutomationEmailTemplates(models);
+
+  models.Notifications = loadPrismaNotifications();
+
+  models.NotificationSettings = loadPrismaNotificationSettings();
+
+  models.EmailDeliveries = loadPrismaEmailDeliveries(models);
+
+  models.AiAgents = loadPrismaAiAgents();
+
+  models.ActivityLogs = loadPrismaActivityLogs(models);
+
+  models.EngageMessages = loadPrismaEngageMessages(models, subdomain);
+
+  models.DeliveryReports = loadPrismaDeliveryReports();
+
+  models.Stats = loadPrismaStats(models);
+
+  models.BroadcastTraces = loadPrismaBroadcastTraces(models);
+
+  models.SmsRequests = loadPrismaSmsRequests(models);
+
+  models.Imports = loadPrismaImports(
+    models,
+    coreEventHandlers('import-export', 'imports'),
   );
 
-  models.AutomationExecutions = db.model<
-    IAutomationExecutionDocument,
-    IExecutionModel
-  >('automations_executions', loadExecutionClass(models));
-
-  models.AutomationEmailTemplates = db.model<
-    IAutomationEmailTemplateDocument,
-    IAutomationEmailTemplateModel
-  >('automation_email_templates', loadAutomationEmailTemplateClass(models));
-
-  models.Notifications = db.model<
-    INotificationDocument,
-    Model<INotificationDocument>
-  >('notifications', notificationSchema);
-
-  models.NotificationSettings = db.model<
-    NotificationSettings,
-    Model<NotificationSettings>
-  >('notification_settings', notificationSettingsSchema);
-
-  models.EmailDeliveries = db.model<
-    IEmailDeliveryDocument,
-    IEmailDeliveryModel
-  >('email_deliveries', loadEmailDeliveryClass(models));
-
-  models.AiAgents = db.model<AiAgentDocument, Model<AiAgentDocument>>(
-    'automations_ai_agents',
-    aiAgentSchema,
+  models.Exports = loadPrismaExports(
+    models,
+    coreEventHandlers('import-export', 'exports'),
   );
+  models.OrgWhiteLabel = loadPrismaOrgWhiteLabel(models);
+  models.ClientPortal = loadPrismaClientPortals(models);
 
-  models.ActivityLogs = db.model<IActivityLogDocument, IActivityLogsModel>(
-    'activity_logs',
-    loadActivityLogsClass(models),
+  models.CPUser = loadPrismaCPUsers(
+    models,
+    subdomain,
+    coreEventHandlers('clientportal', 'cpUser'),
   );
+  models.CPComments = loadPrismaCPComments(models, subdomain);
 
-  models.EngageMessages = db.model<IEngageMessageDocument, IEngageMessageModel>(
-    'broadcast_engage_messages',
-    loadEngageMessageClass(models, subdomain),
-  );
+  models.CPNotifications = loadPrismaCPNotifications(models);
 
-  models.DeliveryReports = db.model<
-    IDeliveryReportsDocument,
-    IDeliveryReportModel
-  >('broadcast_delivery_reports', deliveryReportsSchema);
+  models.BundleCondition = loadPrismaBundleConditions(models, subdomain);
 
-  models.Stats = db.model<IStatsDocument, IStatsModel>(
-    'broadcast_stats',
-    loadStatsClass(models),
-  );
-
-  models.BroadcastTraces = db.model<
-    IBroadcastTraceDocument,
-    IBroadcastTraceModel
-  >('broadcast_traces', loadBroadcastTraceClass(models));
-
-  models.SmsRequests = db.model<ISmsRequestDocument, ISmsRequestModel>(
-    'broadcast_engage_sms_requests',
-    loadSmsRequestClass(models),
-  );
-
-  models.Imports = db.model<IImportDocument, IImportModel>(
-    'imports',
-    loadImportClass(models, coreEventHandlers('import-export', 'imports')),
-  );
-
-  models.Exports = db.model<IExportDocument, IExportModel>(
-    'exports',
-    loadExportClass(models, coreEventHandlers('import-export', 'exports')),
-  );
-  models.OrgWhiteLabel = db.model<IOrgWhiteLabelDocument, IOrgWhiteLabelModel>(
-    'org_white_labels',
-    loadOrgWhiteLabelClass(models),
-  );
-  models.ClientPortal = db.model<IClientPortalDocument, IClientPortalModel>(
-    'client_portals',
-    loadClientPortalClass(models),
-  );
-
-  models.CPUser = db.model<ICPUserDocument, ICPUserModel>(
-    'client_portal_users',
-    loadCPUserClass(
-      models,
-      subdomain,
-      coreEventHandlers('clientportal', 'cpUser'),
-    ),
-  );
-  models.CPComments = db.model<ICPCommentDocument, ICPCommentsModel>(
-    'client_portal_comments',
-    loadCommentClass(models, subdomain),
-  );
-
-  models.CPNotifications = db.model<
-    ICPNotificationDocument,
-    ICPNotificationModel
-  >('client_portal_notifications', loadCPNotificationClass(models));
-
-  models.BundleCondition = db.model<
-    IBundleConditionDocument,
-    IBundleConditionModel
-  >('bundle_conditions', loadBundleConditionClass(models, subdomain));
-
-  models.BundleRule = db.model<IBundleRuleDocument, IBundleRuleModel>(
-    'bundle_rules',
-    loadBundleRuleClass(models, subdomain),
-  );
+  models.BundleRule = loadPrismaBundleRules(models, subdomain);
 
   models.ProductRules = loadPrismaProductRules(models, subdomain);
-  models.PermissionGroups = db.model<
-    IPermissionGroupDocument,
-    IPermissionGroupModel
-  >('permission_groups', loadPermissionGroupClass(models));
+  models.PermissionGroups = loadPrismaPermissionGroups(models);
 
-  models.Template = db.model<ITemplateDocument, ITemplateModal>(
-    'templates',
-    loadTemplateClass(models, subdomain),
-  );
+  models.Template = loadPrismaTemplates(models, subdomain);
 
-  models.TemplateCategory = db.model<
-    ITemplateCategoryDocument,
-    ITemplateCategoryModal
-  >('template_categories', loadTemplateCategoryClass(models));
+  models.TemplateCategory = loadPrismaTemplateCategories(models);
 
-  models.OAuthDeviceCodes = db.model<
-    IOAuthDeviceCodeDocument,
-    Model<IOAuthDeviceCodeDocument>
-  >('oauth_device_codes', oauthDeviceCodeSchema);
-
-  models.OAuthRefreshTokens = db.model<
-    IOAuthRefreshTokenDocument,
-    Model<IOAuthRefreshTokenDocument>
-  >('oauth_refresh_tokens', oauthRefreshTokenSchema);
+  models.OAuthDeviceCodes = loadPrismaOAuthDeviceCodes();
+  models.OAuthRefreshTokens = loadPrismaOAuthRefreshTokens();
 
   const db_name = db.name;
 
   const logDb = db.useDb(`${db_name}_logs`);
 
-  models.Logs = logDb.model<ILogDocument, ILogModel>(
-    'logs',
-    loadLogsClass(models),
-  );
+  models.Logs = loadPrismaLogs(models);
 
   return models;
 };

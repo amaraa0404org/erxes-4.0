@@ -6,14 +6,34 @@ import * as path from 'path';
 // QUERY TRANSLATION: Mongoose query operators → Prisma where clauses
 // =========================================================================
 
+function castToId(value: any): any {
+  if (value === null || value === undefined) return value;
+  if (Array.isArray(value)) {
+    return value.map(castToId);
+  }
+  if (typeof value === 'object') {
+    if (typeof value.toHexString === 'function') {
+      return value.toHexString();
+    }
+    if (value._id) {
+      return typeof value._id === 'object' ? castToId(value._id) : String(value._id);
+    }
+    if (value.id) {
+      if (Buffer.isBuffer(value.id)) {
+        return value.id.toString('hex');
+      }
+      return typeof value.id === 'object' ? castToId(value.id) : String(value.id);
+    }
+  }
+  return value;
+}
+
 export function translateQuery(query: any, arrayFields: Set<string> = new Set(), modelName?: string): any {
   if (!query) return {};
   const where: any = {};
 
   const fieldsMap = modelName ? loadModelFields() : null;
   const nullableFields = fieldsMap && modelName ? fieldsMap[modelName.toLowerCase() + '_nullable'] : null;
-  
-
 
   for (const [key, val] of Object.entries(query)) {
     if (key === '$or') {
@@ -39,10 +59,63 @@ export function translateQuery(query: any, arrayFields: Set<string> = new Set(),
     if (prismaKey.startsWith('details.')) {
       prismaKey = prismaKey.substring(8);
     }
-    
 
+    // Handle $in arrays containing null
+    const hasIn = val && typeof val === 'object' && '$in' in val && Array.isArray((val as any).$in);
+    if (hasIn && ((val as any).$in as any[]).includes(null)) {
+      const nonNulls = ((val as any).$in as any[]).filter(x => x !== null && x !== undefined);
+      const castedNonNulls = castToId(nonNulls);
+      if (castedNonNulls.length === 0) {
+        if (nullableFields && !nullableFields.has(prismaKey)) {
+          continue;
+        }
+        where[prismaKey] = null;
+      } else {
+        const orConditions: any[] = [];
+        if (!nullableFields || nullableFields.has(prismaKey)) {
+          orConditions.push({ [prismaKey]: null });
+        }
+        if (castedNonNulls.length > 0) {
+          orConditions.push({ [prismaKey]: { in: castedNonNulls } });
+        }
+        if (orConditions.length === 1) {
+          const singleCond = orConditions[0];
+          where[prismaKey] = singleCond[prismaKey];
+        } else if (orConditions.length > 1) {
+          if (where.OR) {
+            if (!where.AND) where.AND = [];
+            where.AND.push({ OR: orConditions });
+          } else {
+            where.OR = orConditions;
+          }
+        }
+      }
+      continue;
+    }
 
-    const translatedVal = translateVal(prismaKey, val, arrayFields);
+    // Handle $nin arrays containing null
+    const hasNin = val && typeof val === 'object' && '$nin' in val && Array.isArray((val as any).$nin);
+    if (hasNin && ((val as any).$nin as any[]).includes(null)) {
+      const nonNulls = ((val as any).$nin as any[]).filter(x => x !== null && x !== undefined);
+      const castedNonNulls = castToId(nonNulls);
+      const condition: any = {};
+      if (!nullableFields || nullableFields.has(prismaKey)) {
+        condition.not = null;
+      }
+      if (castedNonNulls.length > 0) {
+        condition.notIn = castedNonNulls;
+      }
+      if (Object.keys(condition).length > 0) {
+        where[prismaKey] = condition;
+      }
+      continue;
+    }
+
+    const translatedVal = translateVal(prismaKey, val, arrayFields, nullableFields, modelName);
+
+    if (translatedVal === undefined) {
+      continue;
+    }
 
     // Skip querying null on non-nullable field
     if (translatedVal === null && nullableFields && !nullableFields.has(prismaKey)) {
@@ -88,10 +161,13 @@ function regexToPrismaFilter(source: string, caseInsensitive: boolean) {
   return { contains: pattern, mode };
 }
 
-function translateVal(prismaKey: string, val: any, arrayFields: Set<string>): any {
+function translateVal(prismaKey: string, val: any, arrayFields: Set<string>, nullableFields?: Set<string> | null, modelName?: string): any {
   const isArrayField = arrayFields.has(prismaKey);
 
   if (val === null || val === undefined) {
+    if (val === null && nullableFields && !nullableFields.has(prismaKey)) {
+      return undefined;
+    }
     return val;
   }
 
@@ -106,71 +182,92 @@ function translateVal(prismaKey: string, val: any, arrayFields: Set<string>): an
     if (keys.length > 1 && keys.every(k => k.startsWith('$'))) {
       const compound: any = {};
       for (const k of keys) {
-        if (k === '$gt') compound.gt = val[k];
-        else if (k === '$gte') compound.gte = val[k];
-        else if (k === '$lt') compound.lt = val[k];
-        else if (k === '$lte') compound.lte = val[k];
-        else if (k === '$ne') compound.not = val[k];
+        if (k === '$gt') compound.gt = castToId(val[k]);
+        else if (k === '$gte') compound.gte = castToId(val[k]);
+        else if (k === '$lt') compound.lt = castToId(val[k]);
+        else if (k === '$lte') compound.lte = castToId(val[k]);
+        else if (k === '$ne') {
+          if (val[k] === null && nullableFields && !nullableFields.has(prismaKey)) {
+            // Skip since required field is never null
+          } else {
+            compound.not = castToId(val[k]);
+          }
+        }
         else if (k === '$in') {
-          if (isArrayField) return { hasSome: val[k] };
-          compound.in = val[k];
+          if (isArrayField) return { hasSome: castToId(val[k]) };
+          compound.in = castToId(val[k]);
         }
         else if (k === '$nin') {
-          if (isArrayField) return { not: { hasSome: val[k] } };
-          compound.notIn = val[k];
+          if (isArrayField) return { not: { hasSome: castToId(val[k]) } };
+          compound.notIn = castToId(val[k]);
         }
         else if (k === '$regex') {
           compound.contains = val[k] instanceof RegExp ? val[k].source : val[k];
           if (val.$options?.includes('i')) compound.mode = 'insensitive';
         }
         else if (k === '$options') {
-          // handled above with $regex
+          // handled above
         }
         else if (k === '$exists') {
-          return val[k] ? { not: null } : null;
+          if (val[k]) {
+            if (nullableFields && !nullableFields.has(prismaKey)) {
+              // Skip since required field always exists
+            } else {
+              return { not: null };
+            }
+          } else {
+            return null;
+          }
         }
       }
       if (Object.keys(compound).length > 0) return compound;
+      return undefined;
     }
 
     if (keys.includes('$in')) {
       if (isArrayField) {
-        return { hasSome: val.$in };
+        return { hasSome: castToId(val.$in) };
       }
-      return { in: val.$in };
+      return { in: castToId(val.$in) };
     }
     if (keys.includes('$nin')) {
       if (isArrayField) {
-        return { not: { hasSome: val.$nin } };
+        return { not: { hasSome: castToId(val.$nin) } };
       }
-      return { notIn: val.$nin };
+      return { notIn: castToId(val.$nin) };
     }
     if (keys.includes('$ne')) {
       if (isArrayField) {
-        return { not: { has: val.$ne } };
+        return { not: { has: castToId(val.$ne) } };
       }
       if (val.$ne === null) {
+        if (nullableFields && !nullableFields.has(prismaKey)) {
+          return undefined;
+        }
         return { not: null };
       }
-      return { not: val.$ne };
+      return { not: castToId(val.$ne) };
     }
     if (keys.includes('$eq')) {
       if (isArrayField) {
-        return { has: val.$eq };
+        return { has: castToId(val.$eq) };
       }
-      return val.$eq;
+      if (val.$eq === null && nullableFields && !nullableFields.has(prismaKey)) {
+        return undefined;
+      }
+      return castToId(val.$eq);
     }
     if (keys.includes('$gt')) {
-      return { gt: val.$gt };
+      return { gt: castToId(val.$gt) };
     }
     if (keys.includes('$gte')) {
-      return { gte: val.$gte };
+      return { gte: castToId(val.$gte) };
     }
     if (keys.includes('$lt')) {
-      return { lt: val.$lt };
+      return { lt: castToId(val.$lt) };
     }
     if (keys.includes('$lte')) {
-      return { lte: val.$lte };
+      return { lte: castToId(val.$lte) };
     }
     if (keys.includes('$regex')) {
       const source = val.$regex instanceof RegExp ? val.$regex.source : val.$regex;
@@ -181,6 +278,9 @@ function translateVal(prismaKey: string, val: any, arrayFields: Set<string>): an
     }
     if (keys.includes('$exists')) {
       if (val.$exists) {
+        if (nullableFields && !nullableFields.has(prismaKey)) {
+          return undefined;
+        }
         return { not: null };
       } else {
         return null;
@@ -188,31 +288,73 @@ function translateVal(prismaKey: string, val: any, arrayFields: Set<string>): an
     }
     if (keys.includes('$all')) {
       if (isArrayField) {
-        return { hasEvery: val.$all };
+        return { hasEvery: castToId(val.$all) };
       }
     }
     if (keys.includes('$elemMatch')) {
-      // For JSONB/array of objects, translate to contains
-      return { some: translateQuery(val.$elemMatch, arrayFields) };
+      return { some: translateQuery(val.$elemMatch, arrayFields, modelName) };
     }
     if (keys.includes('$not')) {
-      return { not: translateVal(prismaKey, val.$not, arrayFields) };
+      const inner = translateVal(prismaKey, val.$not, arrayFields, nullableFields, modelName);
+      if (inner === undefined) return undefined;
+      return { not: inner };
+    }
+    
+    // Support Prisma-style operators (in, notIn, not, gt, gte, lt, lte, equals)
+    if (keys.includes('in')) {
+      if (isArrayField) {
+        return { hasSome: castToId(val.in) };
+      }
+      return { in: castToId(val.in) };
+    }
+    if (keys.includes('notIn')) {
+      if (isArrayField) {
+        return { not: { hasSome: castToId(val.notIn) } };
+      }
+      return { notIn: castToId(val.notIn) };
+    }
+    if (keys.includes('not')) {
+      if (val.not === null) {
+        if (nullableFields && !nullableFields.has(prismaKey)) {
+          return undefined;
+        }
+        return { not: null };
+      }
+      const inner = translateVal(prismaKey, val.not, arrayFields, nullableFields, modelName);
+      if (inner === undefined) return undefined;
+      return { not: inner };
+    }
+    if (keys.includes('gt')) {
+      return { gt: castToId(val.gt) };
+    }
+    if (keys.includes('gte')) {
+      return { gte: castToId(val.gte) };
+    }
+    if (keys.includes('lt')) {
+      return { lt: castToId(val.lt) };
+    }
+    if (keys.includes('lte')) {
+      return { lte: castToId(val.lte) };
+    }
+    if (keys.includes('equals')) {
+      if (val.equals === null && nullableFields && !nullableFields.has(prismaKey)) {
+        return undefined;
+      }
+      return { equals: castToId(val.equals) };
     }
     if (keys.includes('$size')) {
-      // Prisma doesn't have native size filter for arrays;
-      // we'll handle this at the application level
       return undefined;
     }
   }
 
   if (isArrayField) {
     if (Array.isArray(val)) {
-      return { equals: val };
+      return { equals: castToId(val) };
     }
-    return { has: val };
+    return { has: castToId(val) };
   }
 
-  return val;
+  return castToId(val);
 }
 
 // =========================================================================
@@ -387,7 +529,8 @@ export class CentralPrismaQuery {
   }
 
   async distinct(field: string) {
-    const where = translateQuery(this.query, this.arrayFields);
+    const modelName = (this.prismaModel.name || this.prismaModel.$name || '').toLowerCase();
+    const where = translateQuery(this.query, this.arrayFields, modelName);
     const prismaField = field === '_id' ? 'id' : field;
     const items = await this.prismaModel.findMany({
       where,
@@ -515,9 +658,10 @@ export async function executeAggregate(
   arrayFields: Set<string> = new Set(),
   tableName?: string,
 ): Promise<any[]> {
+  const modelName = (prismaModel.name || prismaModel.$name || tableName || '').toLowerCase();
   // Simple pipelines: just $match
   if (pipeline.length === 1 && pipeline[0].$match) {
-    const where = translateQuery(pipeline[0].$match, arrayFields);
+    const where = translateQuery(pipeline[0].$match, arrayFields, modelName);
     const items = await prismaModel.findMany({ where });
     return items.map(mapper);
   }
@@ -543,7 +687,7 @@ export async function executeAggregate(
   }
 
   // Simple match + sort + limit + skip + project
-  const where = matchStage ? translateQuery(matchStage.$match, arrayFields) : {};
+  const where = matchStage ? translateQuery(matchStage.$match, arrayFields, modelName) : {};
   const options: any = { where };
 
   if (sortStage) {
@@ -585,12 +729,13 @@ async function executeGroupAggregate(
   arrayFields: Set<string>,
   mapper: (item: any) => any,
 ): Promise<any[]> {
+  const modelName = (prismaModel.name || prismaModel.$name || '').toLowerCase();
   const matchStage = pipeline.find((s: any) => s.$match);
   const groupStage = pipeline.find((s: any) => s.$group);
 
   if (!groupStage) return [];
 
-  const where = matchStage ? translateQuery(matchStage.$match, arrayFields) : {};
+  const where = matchStage ? translateQuery(matchStage.$match, arrayFields, modelName) : {};
   const groupId = groupStage.$group._id;
 
   // Determine groupBy fields
@@ -715,9 +860,10 @@ async function executeLookupAggregate(
   arrayFields: Set<string>,
   mapper: (item: any) => any,
 ): Promise<any[]> {
+  const modelName = (prismaModel.name || prismaModel.$name || '').toLowerCase();
   // For lookup aggregations, we simulate by doing multiple queries
   const matchStage = pipeline.find((s: any) => s.$match);
-  const where = matchStage ? translateQuery(matchStage.$match, arrayFields) : {};
+  const where = matchStage ? translateQuery(matchStage.$match, arrayFields, modelName) : {};
 
   const items = await prismaModel.findMany({ where });
   let results = items.map(mapper);
@@ -968,7 +1114,7 @@ export function createPrismaAdapter(
     },
 
     async countDocuments(query: any = {}) {
-      const where = translateQuery(query, arrayFields);
+      const where = translateQuery(query, arrayFields, modelName);
       return prismaModel.count({ where });
     },
 
@@ -977,7 +1123,7 @@ export function createPrismaAdapter(
     },
 
     async updateOne(query: any, update: any) {
-      const where = translateQuery(query, arrayFields);
+      const where = translateQuery(query, arrayFields, modelName);
       const item = await prismaModel.findFirst({ where, select: { id: true } });
       if (item) {
         const hasPullOrAddToSet = update.$pull || update.$addToSet;
@@ -996,7 +1142,7 @@ export function createPrismaAdapter(
     },
 
     async updateMany(query: any, update: any) {
-      const where = translateQuery(query, arrayFields);
+      const where = translateQuery(query, arrayFields, modelName);
       const hasPullOrAddToSet = update.$pull || update.$addToSet;
 
       if (hasPullOrAddToSet) {
@@ -1040,13 +1186,13 @@ export function createPrismaAdapter(
     },
 
     async findOneAndUpdate(query: any, update: any, options?: any) {
-      const where = translateQuery(query, arrayFields);
+      const where = translateQuery(query, arrayFields, modelName);
       const item = await prismaModel.findFirst({ where });
 
       if (!item) {
         if (options?.upsert) {
           const data = filterPrismaInput(modelName, translateUpdate(update, toPrismaUpdate, arrayFields));
-          const created = await prismaModel.create({ data: filterPrismaInput(modelName, { ...translateQuery(query, arrayFields), ...data }) });
+          const created = await prismaModel.create({ data: filterPrismaInput(modelName, { ...translateQuery(query, arrayFields, modelName), ...data }) });
           return mapper(created);
         }
         return null;
@@ -1068,7 +1214,7 @@ export function createPrismaAdapter(
     },
 
     async findOneAndDelete(query: any) {
-      const where = translateQuery(query, arrayFields);
+      const where = translateQuery(query, arrayFields, modelName);
       const item = await prismaModel.findFirst({ where });
       if (item) {
         await prismaModel.delete({ where: { id: item.id } });
@@ -1103,7 +1249,7 @@ export function createPrismaAdapter(
     },
 
     async deleteOne(query: any) {
-      const where = translateQuery(query, arrayFields);
+      const where = translateQuery(query, arrayFields, modelName);
       const item = await prismaModel.findFirst({ where, select: { id: true } });
       if (item) {
         await prismaModel.delete({ where: { id: item.id } });
@@ -1113,7 +1259,7 @@ export function createPrismaAdapter(
     },
 
     async deleteMany(query: any = {}) {
-      const where = translateQuery(query, arrayFields);
+      const where = translateQuery(query, arrayFields, modelName);
       const result = await prismaModel.deleteMany({ where });
       return { deletedCount: result.count, acknowledged: true };
     },
@@ -1129,14 +1275,14 @@ export function createPrismaAdapter(
     },
 
     async exists(query: any) {
-      const where = translateQuery(query, arrayFields);
+      const where = translateQuery(query, arrayFields, modelName);
       const item = await prismaModel.findFirst({ where, select: { id: true } });
       return item ? { _id: item.id } : null;
     },
 
     async distinct(field: string, query?: any) {
       const prismaField = field === '_id' ? 'id' : field;
-      const where = query ? translateQuery(query, arrayFields) : {};
+      const where = query ? translateQuery(query, arrayFields, modelName) : {};
       const items = await prismaModel.findMany({
         where,
         select: { [prismaField]: true },
@@ -1161,7 +1307,7 @@ export function createPrismaAdapter(
           inserted++;
         }
         if (op.updateOne) {
-          const where = translateQuery(op.updateOne.filter, arrayFields);
+          const where = translateQuery(op.updateOne.filter, arrayFields, modelName);
           const item = await prismaModel.findFirst({ where, select: { id: true } });
           if (item) {
             const hasPullOrAddToSet = op.updateOne.update?.$pull || op.updateOne.update?.$addToSet;
@@ -1176,21 +1322,21 @@ export function createPrismaAdapter(
           }
         }
         if (op.updateMany) {
-          const where = translateQuery(op.updateMany.filter, arrayFields);
+          const where = translateQuery(op.updateMany.filter, arrayFields, modelName);
           const data = filterPrismaInput(modelName, translateUpdate(op.updateMany.update, toPrismaUpdate, arrayFields));
           const result = await prismaModel.updateMany({ where, data });
           matched += result.count;
           modified += result.count;
         }
         if (op.deleteOne) {
-          const where = translateQuery(op.deleteOne.filter, arrayFields);
+          const where = translateQuery(op.deleteOne.filter, arrayFields, modelName);
           const item = await prismaModel.findFirst({ where, select: { id: true } });
           if (item) {
             await prismaModel.delete({ where: { id: item.id } });
           }
         }
         if (op.deleteMany) {
-          const where = translateQuery(op.deleteMany.filter, arrayFields);
+          const where = translateQuery(op.deleteMany.filter, arrayFields, modelName);
           await prismaModel.deleteMany({ where });
         }
       }

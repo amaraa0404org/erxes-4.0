@@ -7,9 +7,11 @@ const { execSync } = require('child_process');
 let devRemotesArg = '';
 if (ENABLED_PLUGINS) {
   try {
-    const remotes = ENABLED_PLUGINS.split(',').map((plugin) => `${plugin}_ui`);
+    const remotes = ENABLED_PLUGINS.split(',')
+      .filter((plugin) => plugin !== 'clientportal')
+      .map((plugin) => `${plugin}_ui`);
 
-    devRemotesArg = `--devRemotes="${remotes}"`;
+    devRemotesArg = remotes.length > 0 ? `--devRemotes="${remotes.join(',')}"` : '';
   } catch (error) {
     console.error('Error parsing DEV_REMOTES:', error);
     process.exit(1);

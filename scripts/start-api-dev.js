@@ -12,7 +12,7 @@ let projectsCount = 2;
 if (ENABLED_PLUGINS) {
   try {
     plugins = ENABLED_PLUGINS.split(',')
-      .map((plugin) => `${plugin}_api`)
+      .map((plugin) => plugin === 'clientportal' ? 'clientportal-api' : `${plugin}_api`)
       .join(' ');
 
     projectsCount += plugins.split(' ').length;
@@ -25,7 +25,7 @@ if (ENABLED_PLUGINS) {
 if (ENABLED_PLUGINS_ONLY_API) {
   try {
     const apiPlugins = ENABLED_PLUGINS_ONLY_API.split(',')
-      .map((plugin) => `${plugin}_api`)
+      .map((plugin) => plugin === 'clientportal' ? 'clientportal-api' : `${plugin}_api`)
       .join(' ');
 
     plugins = `${plugins} ${apiPlugins}`;

@@ -1,7 +1,23 @@
-import { types as clientPortalTypes } from '../../modules/clientportal/graphql/schemas/clientPortal';
-import { types as cpUserTypes } from '../../modules/clientportal/graphql/schemas/cpUser';
-import { types as commentTypes } from '../../modules/clientportal/graphql/schemas/comment';
-import { types as cpNotificationTypes } from '../../modules/clientportal/graphql/schemas/cpNotification';
+import {
+  types as clientPortalTypes,
+  queries as clientPortalQueries,
+  mutations as clientPortalMutations,
+} from '../../modules/clientportal/graphql/schemas/clientPortal';
+import {
+  types as cpUserTypes,
+  queries as cpUserQueries,
+  mutations as cpUserMutations,
+} from '../../modules/clientportal/graphql/schemas/cpUser';
+import {
+  types as commentTypes,
+  queries as commentQueries,
+  mutations as commentMutations,
+} from '../../modules/clientportal/graphql/schemas/comment';
+import {
+  types as cpNotificationTypes,
+  queries as cpNotificationQueries,
+  mutations as cpNotificationMutations,
+} from '../../modules/clientportal/graphql/schemas/cpNotification';
 
 export const types = `
   ${clientPortalTypes}
@@ -27,6 +43,11 @@ export const queries = `
   ): CPNotificationListResponse
   notificationDetail(_id: String!): CPNotification
   unreadNotificationCount(clientPortalId: String): Int
+
+  ${clientPortalQueries || ''}
+  ${cpUserQueries || ''}
+  ${commentQueries || ''}
+  ${cpNotificationQueries || ''}
 `;
 
 export const mutations = `
@@ -115,4 +136,9 @@ export const mutations = `
 
   markNotificationAsRead(_id: String!): JSON
   markAllNotificationsAsRead(clientPortalId: String): JSON
+
+  ${clientPortalMutations || ''}
+  ${cpUserMutations || ''}
+  ${commentMutations || ''}
+  ${cpNotificationMutations || ''}
 `;

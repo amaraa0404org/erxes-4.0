@@ -29,7 +29,9 @@ const config: ModuleFederationConfig = {
   },
 
   remotes: process.env.ENABLED_PLUGINS
-    ? process.env.ENABLED_PLUGINS.split(',').map((plugin) => `${plugin}_ui`)
+    ? process.env.ENABLED_PLUGINS.split(',')
+        .filter((plugin) => plugin !== 'clientportal')
+        .map((plugin) => `${plugin}_ui`)
     : [],
 };
 
