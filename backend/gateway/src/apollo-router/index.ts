@@ -7,35 +7,46 @@ import * as yaml from 'yaml';
 import * as net from 'net';
 import {
   dirTempPath,
-  routerConfigPath,
+  getRouterConfigPath,
   routerPath,
-  supergraphPath,
+  getSupergraphPath,
 } from '~/apollo-router/paths';
 import supergraphCompose from '~/apollo-router/supergraph-compose';
 
 dotenv.config();
 
-const { NODE_ENV, APOLLO_ROUTER_PORT, INTROSPECTION } = process.env;
+const { NODE_ENV, INTROSPECTION } = process.env;
 
-let routerProcess: ChildProcess | undefined = undefined;
-let hasRouterStarted = false;
-let isIntentionalRouterStop = false;
+let routerProcesses: { internal?: ChildProcess; external?: ChildProcess } = {};
+let hasRouterStarted = { internal: false, external: false };
+let isIntentionalRouterStop = { internal: false, external: false };
 const intentionallyStoppedRouters = new WeakSet<ChildProcess>();
-let routerRecoverTimer: NodeJS.Timeout | undefined;
-let routerRecoverAttempt = 0;
+let routerRecoverTimers: { internal?: NodeJS.Timeout; external?: NodeJS.Timeout } = {};
+let routerRecoverAttempts = { internal: 0, external: 0 };
 
-const waitForRouterReady = async (timeoutMs = 15_000) => {
+export const getApolloRouterPort = (scope: 'internal' | 'external') => {
+  if (scope === 'internal') {
+    return Number(process.env.APOLLO_ROUTER_PORT) || 50000;
+  }
+  return Number(process.env.APOLLO_ROUTER_PORT_EXTERNAL) || 50001;
+};
+
+export const apolloRouterPort = getApolloRouterPort('internal');
+
+const waitForRouterReady = async (scope: 'internal' | 'external', timeoutMs = 15_000) => {
   const startedAt = Date.now();
+  const port = getApolloRouterPort(scope);
 
   while (Date.now() - startedAt < timeoutMs) {
-    if (!routerProcess || routerProcess.exitCode !== null) {
-      throw new Error('Apollo Router exited before it became ready');
+    const proc = routerProcesses[scope];
+    if (!proc || proc.exitCode !== null) {
+      throw new Error(`Apollo Router [${scope}] exited before it became ready`);
     }
 
     const isReady = await new Promise<boolean>((resolve) => {
       const socket = net.createConnection({
         host: '127.0.0.1',
-        port: apolloRouterPort,
+        port,
       });
 
       socket.once('connect', () => {
@@ -61,11 +72,11 @@ const waitForRouterReady = async (timeoutMs = 15_000) => {
     await new Promise((resolve) => setTimeout(resolve, 250));
   }
 
-  throw new Error('Apollo Router did not become ready in time');
+  throw new Error(`Apollo Router [${scope}] did not become ready in time`);
 };
 
-const scheduleRouterRecovery = () => {
-  if (!hasRouterStarted || routerRecoverTimer) {
+const scheduleRouterRecovery = (scope: 'internal' | 'external') => {
+  if (!hasRouterStarted[scope] || routerRecoverTimers[scope]) {
     return;
   }
 
@@ -74,45 +85,45 @@ const scheduleRouterRecovery = () => {
     return;
   }
 
-  routerRecoverAttempt += 1;
-  const delayMs = Math.min(30_000, 1000 * routerRecoverAttempt);
+  routerRecoverAttempts[scope] += 1;
+  const delayMs = Math.min(30_000, 1000 * routerRecoverAttempts[scope]);
 
-  routerRecoverTimer = setTimeout(async () => {
-    routerRecoverTimer = undefined;
+  routerRecoverTimers[scope] = setTimeout(async () => {
+    routerRecoverTimers[scope] = undefined;
 
     try {
-      console.error('Attempting to recover Apollo Router...');
-      await restartRouter(targets);
-      routerRecoverAttempt = 0;
+      console.error(`Attempting to recover Apollo Router [${scope}]...`);
+      await restartRouter(scope, targets);
+      routerRecoverAttempts[scope] = 0;
     } catch (e) {
       console.error(e);
-      scheduleRouterRecovery();
+      scheduleRouterRecovery(scope);
     }
   }, delayMs);
 };
 
-const waitForRouterExit = async (signal: NodeJS.Signals) => {
-  if (!routerProcess) {
+const waitForRouterExit = async (scope: 'internal' | 'external', signal: NodeJS.Signals) => {
+  const proc = routerProcesses[scope];
+  if (!proc) {
     return;
   }
 
-  const processToStop = routerProcess;
   let didExit = false;
 
-  isIntentionalRouterStop = true;
-  intentionallyStoppedRouters.add(processToStop);
+  isIntentionalRouterStop[scope] = true;
+  intentionallyStoppedRouters.add(proc);
 
   await new Promise<void>((resolve) => {
     const timeout = setTimeout(resolve, 5000);
 
-    processToStop.once('exit', () => {
+    proc.once('exit', () => {
       didExit = true;
       clearTimeout(timeout);
       resolve();
     });
 
     try {
-      processToStop.kill(signal);
+      proc.kill(signal);
     } catch (e) {
       clearTimeout(timeout);
       console.error(e);
@@ -120,38 +131,37 @@ const waitForRouterExit = async (signal: NodeJS.Signals) => {
     }
   });
 
-  if (!didExit && processToStop.exitCode === null) {
+  if (!didExit && proc.exitCode === null) {
     try {
-      processToStop.kill('SIGKILL');
+      proc.kill('SIGKILL');
     } catch (e) {
       console.error(e);
     }
   }
 
-  isIntentionalRouterStop = false;
+  isIntentionalRouterStop[scope] = false;
 
-  if (routerProcess === processToStop) {
-    routerProcess = undefined;
+  if (routerProcesses[scope] === proc) {
+    routerProcesses[scope] = undefined;
   }
 };
 
-export const stopRouter = (signal: NodeJS.Signals) => {
-  if (!routerProcess) {
+export const stopRouter = (scope: 'internal' | 'external', signal: NodeJS.Signals) => {
+  const proc = routerProcesses[scope];
+  if (!proc) {
     return;
   }
   try {
-    intentionallyStoppedRouters.add(routerProcess);
-    isIntentionalRouterStop = true;
-    routerProcess.kill(signal);
+    intentionallyStoppedRouters.add(proc);
+    isIntentionalRouterStop[scope] = true;
+    proc.kill(signal);
   } catch (e) {
     console.error(e);
   }
 };
-export const apolloRouterPort = Number(APOLLO_ROUTER_PORT) || 50_000;
 
 const downloadRouter = async () => {
   if (NODE_ENV === 'production') {
-    // router must be already inside the image
     return;
   }
   if (fs.existsSync(routerPath)) {
@@ -170,25 +180,12 @@ const downloadRouter = async () => {
   }
 };
 
-const createRouterConfig = async () => {
-  if (NODE_ENV === 'production' && fs.existsSync(routerConfigPath)) {
-    // Don't rewrite in production if it exists. Delete and restart to update the config
-    return;
-  }
+const createRouterConfig = async (scope: 'internal' | 'external') => {
+  const configPath = getRouterConfigPath(scope);
+  const port = getApolloRouterPort(scope);
 
-  if (
-    NODE_ENV === 'production' &&
-    (INTROSPECTION || '').trim().toLowerCase() === 'true'
-  ) {
-    console.warn(
-      '----------------------------------------------------------------------------------------------',
-    );
-    console.warn(
-      "Graphql introspection is enabled in production environment. Disable it, if it isn't required for front-end development. Hint: Check gateway config in configs.json",
-    );
-    console.warn(
-      '----------------------------------------------------------------------------------------------',
-    );
+  if (NODE_ENV === 'production' && fs.existsSync(configPath)) {
+    return;
   }
 
   const config: any = {
@@ -222,18 +219,32 @@ const createRouterConfig = async () => {
       },
     },
     supergraph: {
-      listen: `127.0.0.1:${apolloRouterPort}`,
+      listen: `127.0.0.1:${port}`,
       introspection:
         NODE_ENV === 'development' ||
         (INTROSPECTION || '').trim().toLowerCase() === 'true',
     },
+    telemetry: {
+      exporters: {
+        metrics: {
+          prometheus: {
+            listen: `127.0.0.1:${port + 1000}`,
+          },
+        },
+      },
+    },
+    health_check: {
+      listen: `127.0.0.1:${port + 2000}`,
+    },
   };
 
-  fs.writeFileSync(routerConfigPath, yaml.stringify(config));
+  fs.writeFileSync(configPath, yaml.stringify(config));
 };
 
-const spawnRouter = () => {
+const spawnRouter = (scope: 'internal' | 'external') => {
   const devOptions = ['--dev'];
+  const configPath = getRouterConfigPath(scope);
+  const schemaPath = getSupergraphPath(scope);
 
   const spawnedRouter = spawn(
     routerPath,
@@ -242,61 +253,61 @@ const spawnRouter = () => {
       '--log',
       NODE_ENV === 'development' ? 'warn' : 'error',
       `--supergraph`,
-      supergraphPath,
+      schemaPath,
       `--config`,
-      routerConfigPath,
+      configPath,
     ],
     { stdio: 'inherit' },
   );
 
-  routerProcess = spawnedRouter;
+  routerProcesses[scope] = spawnedRouter;
 
   spawnedRouter.once('exit', (code, signal) => {
     console.error(
-      `Apollo Router exited with code=${code ?? 'null'} signal=${
+      `Apollo Router [${scope}] exited with code=${code ?? 'null'} signal=${
         signal ?? 'null'
       }`,
     );
 
-    if (routerProcess === spawnedRouter) {
-      routerProcess = undefined;
+    if (routerProcesses[scope] === spawnedRouter) {
+      routerProcesses[scope] = undefined;
     }
 
     if (
-      !isIntentionalRouterStop &&
+      !isIntentionalRouterStop[scope] &&
       !intentionallyStoppedRouters.has(spawnedRouter)
     ) {
-      scheduleRouterRecovery();
+      scheduleRouterRecovery(scope);
     }
   });
 };
 
-export const startRouter = async (proxy) => {
-  await createRouterConfig();
-  console.log('Downloading router...');
+export const startRouter = async (scope: 'internal' | 'external', proxy) => {
+  await createRouterConfig(scope);
+  console.log(`Downloading router...`);
   await downloadRouter();
-  await supergraphCompose(proxy);
-  console.log('Creating router config...');
+  await supergraphCompose(scope, proxy);
+  console.log(`Creating router config [${scope}]...`);
 
-  spawnRouter();
-  await waitForRouterReady();
-  hasRouterStarted = true;
-  routerRecoverAttempt = 0;
+  spawnRouter(scope);
+  await waitForRouterReady(scope);
+  hasRouterStarted[scope] = true;
+  routerRecoverAttempts[scope] = 0;
 };
 
-export const restartRouter = async (proxy) => {
-  console.log('Restarting Apollo Router...');
+export const restartRouter = async (scope: 'internal' | 'external', proxy) => {
+  console.log(`Restarting Apollo Router [${scope}]...`);
 
-  await supergraphCompose(proxy);
+  await supergraphCompose(scope, proxy);
 
-  if (!hasRouterStarted) {
-    console.log('Apollo Router is not running yet; supergraph refreshed');
+  if (!hasRouterStarted[scope]) {
+    console.log(`Apollo Router [${scope}] is not running yet; supergraph refreshed`);
     return;
   }
 
-  await waitForRouterExit('SIGTERM');
-  spawnRouter();
-  await waitForRouterReady();
-  routerRecoverAttempt = 0;
-  console.log('Apollo Router restarted successfully');
+  await waitForRouterExit(scope, 'SIGTERM');
+  spawnRouter(scope);
+  await waitForRouterReady(scope);
+  routerRecoverAttempts[scope] = 0;
+  console.log(`Apollo Router [${scope}] restarted successfully`);
 };

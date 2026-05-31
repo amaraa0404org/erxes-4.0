@@ -117,12 +117,12 @@ export const proxyError = (error, req: any, res?: any) => {
   }
 };
 
-export function applyProxiesCoreless(app: Express) {
+export function applyProxiesCoreless(app: Express, routerPort: number = apolloRouterPort) {
   app.use(
     '^/graphql',
     createProxyMiddleware({
       pathRewrite: { '^/graphql': '/' },
-      target: `http://127.0.0.1:${apolloRouterPort}`,
+      target: `http://127.0.0.1:${routerPort}`,
       on: {
         proxyReq,
         proxyRes,

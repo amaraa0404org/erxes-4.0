@@ -3,10 +3,6 @@ import { appQueries } from '@/apps/graphql/queries';
 import { authQueries } from '@/auth/graphql/resolvers/queries';
 import { oauthClientAppQueries } from '@/auth/graphql/resolvers/oauthClientApps';
 import { automationQueries } from '@/automations/graphql/resolvers/queries';
-import { clientPortalQueries } from '@/clientportal/graphql/resolvers/queries/clientPortal';
-import { cpUserQueries } from '@/clientportal/graphql/resolvers/queries/cpUser';
-import { commentQueries } from '@/clientportal/graphql/resolvers/queries/comment';
-import { cpNotificationQueries } from '@/clientportal/graphql/resolvers/queries/cpNotification';
 import { contactQueries } from '@/contacts/graphql/resolvers/queries';
 import { documentQueries } from '@/documents/graphql/queries';
 import { queries as formQueries } from '@/forms/graphql/resolvers';
@@ -72,13 +68,9 @@ export const queries = {
   ...internalNoteQueries,
   ...broadcastQueries,
   ...propertiesQueries,
-  ...clientPortalQueries,
   ...importExportCommonQueries,
   ...importQueries,
   ...exportQueries,
-  ...cpUserQueries,
-  ...commentQueries,
-  ...cpNotificationQueries,
   ...activityLogQueries,
   ...bundleQueries,
   ...templateQueries,

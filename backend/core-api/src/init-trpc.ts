@@ -17,7 +17,6 @@ import { IModels } from './connectionResolvers';
 import { notificationTrpcRouter } from '~/modules/notifications/trpc';
 import { importExportTrpcRouter } from '~/modules/import-export/trpc';
 import { logsTrpcRouter } from './modules/logs/trpc';
-import { clientPortalNotificationTrpcRouter } from '@/clientportal/trpc';
 import { permissionTrpcRouter } from './modules/permissions/trpc/permission';
 
 export type CoreTRPCContext = ITRPCContext<{
@@ -54,7 +53,6 @@ export const appRouter = t.mergeRouters(
   importExportTrpcRouter,
   logsTrpcRouter,
   categoriesNamedRouter,
-  clientPortalNotificationTrpcRouter,
   permissionTrpcRouter,
 );
 

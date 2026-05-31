@@ -15,6 +15,7 @@ interface PluginConfig {
   port: number;
   hasSubscriptions?: boolean;
   meta?: any;
+  scope?: 'internal' | 'external';
 }
 
 export const isDev = NODE_ENV === 'development';
@@ -128,6 +129,7 @@ export const joinErxesGateway = async ({
   port,
   hasSubscriptions = false,
   meta,
+  scope,
 }: PluginConfig) => {
   const rawVersion = process.env.RELEASE_VERSION;
   const releaseVersion = rawVersion?.startsWith('3.') ? rawVersion : 'latest';
@@ -148,6 +150,7 @@ export const joinErxesGateway = async ({
         ...meta,
       },
       releaseVersion,
+      scope: scope || (name === 'clientportal' ? 'external' : 'internal'),
     }),
   );
 

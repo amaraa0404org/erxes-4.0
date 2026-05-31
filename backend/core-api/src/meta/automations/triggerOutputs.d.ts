@@ -1,0 +1,7 @@
+import { TAutomationRuntimeOutputDefinition } from 'erxes-api-shared/core-modules';
+export declare const WEBHOOK_TRIGGER_OUTPUT: TAutomationRuntimeOutputDefinition;
+export declare const TEAM_MEMBER_TRIGGER_OUTPUT: TAutomationRuntimeOutputDefinition;
+export declare const CUSTOMER_BASE_TRIGGER_OUTPUT: TAutomationRuntimeOutputDefinition;
+export declare const CUSTOMER_TRIGGER_OUTPUT: TAutomationRuntimeOutputDefinition;
+export declare const LEAD_TRIGGER_OUTPUT: TAutomationRuntimeOutputDefinition;
+export declare const COMPANY_TRIGGER_OUTPUT: TAutomationRuntimeOutputDefinition;

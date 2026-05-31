@@ -19,14 +19,10 @@ import { tagMutations } from '@/tags/graphql/mutations';
 import { broadcastMutations } from '~/modules/broadcast/graphql/resolvers/mutations';
 import { notificationMutations } from '~/modules/notifications/graphql/resolver/mutations';
 import { propertiesMutations } from '~/modules/properties/graphql/resolvers/mutations';
-import { clientPortalMutations } from '@/clientportal/graphql/resolvers/mutations/clientPortal';
 import {
   importMutations,
   exportMutations,
 } from '~/modules/import-export/graphql/resolvers';
-import { cpUserMutations } from '@/clientportal/graphql/resolvers/mutations/cpUser';
-import { commentMutations } from '@/clientportal/graphql/resolvers/mutations/comment';
-import { cpNotificationMutations } from '@/clientportal/graphql/resolvers/mutations/cpNotification';
 import { bundleMutations } from '@/bundle/graphql/resolvers/mutations';
 import { templateMutations } from '@/template/graphql/mutations';
 
@@ -52,12 +48,8 @@ export const mutations = {
   ...internalNoteMutations,
   ...broadcastMutations,
   ...propertiesMutations,
-  ...clientPortalMutations,
   ...importMutations,
   ...exportMutations,
-  ...cpUserMutations,
-  ...commentMutations,
-  ...cpNotificationMutations,
   ...bundleMutations,
   ...templateMutations,
 };

@@ -17,7 +17,8 @@ const updateApolloRouter = async () => {
   routerUpdateInFlight = (async () => {
     clearServiceDiscoveryCache();
     global.currentTargets = await retryGetProxyTargets();
-    await restartRouter(global.currentTargets);
+    await restartRouter('internal', global.currentTargets);
+    await restartRouter('external', global.currentTargets);
   })();
 
   try {

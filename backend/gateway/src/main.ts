@@ -3,7 +3,7 @@ import './sentry-instrument';
 import * as Sentry from '@sentry/node';
 import * as dotenv from 'dotenv';
 
-import express from 'express';
+import express, { Express } from 'express';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import * as http from 'http';
@@ -34,7 +34,6 @@ import {
   setActivePlugins,
 } from 'erxes-api-shared/utils';
 import { generateModels } from '~/connectionResolver';
-// import * as jwt from 'jsonwebtoken';
 import { applyGraphqlLimiters } from '~/middlewares/graphql-limiter';
 import {
   startSubscriptionServer,
@@ -45,7 +44,9 @@ import * as path from 'path';
 
 dotenv.config();
 
-const port = process.env.PORT ? Number(process.env.PORT) : 4000;
+const portInternal = process.env.PORT ? Number(process.env.PORT) : 4000;
+const portExternal = process.env.PORT_EXTERNAL ? Number(process.env.PORT_EXTERNAL) : 4001;
+
 const { DOMAIN, WIDGETS_DOMAIN, ALLOWED_ORIGINS, ALLOWED_DOMAINS } =
   process.env;
 
@@ -89,184 +90,176 @@ Sentry.getGlobalScope().setTags({
   service: 'gateway',
 });
 
-const app = express();
-applyTrustProxy(app);
-
-app.use(cookieParser());
-
+// Configure Rate Limiter
 const gatewayRateLimiter: RateLimitRequestHandler = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 5000, // generous global cap per IP
+  windowMs: 15 * 60 * 1000,
+  max: 5000,
   standardHeaders: true,
   legacyHeaders: false,
   skip: (req) => req.path === '/health' || req.path.startsWith('/bullmq-board'),
 });
 
-app.use(gatewayRateLimiter);
+const setupExpressApp = (app: Express, isInternal: boolean) => {
+  applyTrustProxy(app);
+  app.use(cookieParser());
+  app.use(gatewayRateLimiter);
 
-app.use(async (req, res, next) => {
-  const appToken = req.headers['x-app-api-token'] as string;
-  // const clientPortalToken = req.headers['x-app-token'] as string;
+  app.use(async (req, res, next) => {
+    const appToken = req.headers['x-app-api-token'] as string;
 
-  if (appToken) {
-    try {
-      const subdomain = getSubdomain(req);
-      const cacheKey = `app_token:${subdomain}:${appToken}`;
+    if (appToken) {
+      try {
+        const subdomain = getSubdomain(req);
+        const cacheKey = `app_token:${subdomain}:${appToken}`;
 
-      let isValid = await redis.get(cacheKey);
+        let isValid = await redis.get(cacheKey);
 
-      if (isValid === null) {
-        const models = await generateModels(subdomain);
-        const appInDb = await models.Apps.findOne({
-          token: appToken,
-          status: 'active',
-        });
-        isValid = appInDb ? '1' : '0';
-        await redis.set(cacheKey, isValid, 'EX', 3600);
+        if (isValid === null) {
+          const models = await generateModels(subdomain);
+          const appInDb = await models.Apps.findOne({
+            token: appToken,
+            status: 'active',
+          });
+          isValid = appInDb ? '1' : '0';
+          await redis.set(cacheKey, isValid, 'EX', 3600);
+        }
+
+        if (isValid === '1') {
+          return cors({ credentials: true, origin: true })(req, res, next);
+        }
+      } catch {
+        // Fall through
       }
+    }
 
-      if (isValid === '1') {
-        return cors({ credentials: true, origin: true })(req, res, next);
+    return cors(corsOptions)(req, res, next);
+  });
+
+  app.use(userMiddleware);
+
+  if (isInternal) {
+    app.use('/bullmq-board', serverAdapter.getRouter());
+  }
+
+  app.get('/health', async (_req, res) => {
+    res.end('ok');
+  });
+
+  app.get('/locales/:lng/:file', async (req, res) => {
+    const localesRoot = path.join(__dirname, './locales');
+    try {
+      const requestedPath = path.resolve(
+        localesRoot,
+        req.params.lng,
+        req.params.file,
+      );
+      const realPath = fs.realpathSync(requestedPath);
+      if (!realPath.startsWith(localesRoot + path.sep)) {
+        return res.status(403).send('Forbidden');
+      }
+      const lngJson = fs.readFileSync(realPath);
+      res.json(JSON.parse(lngJson.toString()));
+    } catch {
+      res.status(500).send('Error fetching locale');
+    }
+  });
+
+  app.use('/pl:serviceName', async (req, res) => {
+    try {
+      const serviceName: string = req.params.serviceName.replace(':', '');
+      const service = await getPlugin(serviceName);
+      const targetUrl = service.address;
+
+      if (targetUrl) {
+        return createProxyMiddleware({
+          target: targetUrl,
+          changeOrigin: true,
+          on: {
+            proxyReq,
+          },
+          pathRewrite: {
+            [`^/pl:${serviceName}`]: '/',
+          },
+        })(req, res);
+      } else {
+        res.status(404).send('Service not found');
       }
     } catch {
-      // Fall through to regular CORS
+      res.status(500).send('Error fetching services');
     }
-  }
+  });
+};
 
-  // if (clientPortalToken) {
-  //   try {
-  //     const decoded: any = jwt.verify(
-  //       clientPortalToken,
-  //       process.env.JWT_TOKEN_SECRET || 'SECRET',
-  //     );
+const appInternal = express();
+setupExpressApp(appInternal, true);
 
-  //     if (decoded?.clientPortalId) {
-  //       return cors({ credentials: true, origin: true })(req, res, next);
-  //     }
-  //   } catch {
-  //     // Fall through to regular CORS
-  //   }
-  // }
+const appExternal = express();
+setupExpressApp(appExternal, false);
 
-  return cors(corsOptions)(req, res, next);
-});
-
-app.use(userMiddleware);
-
-app.use('/bullmq-board', serverAdapter.getRouter());
-
-app.get('/health', async (_req, res) => {
-  res.end('ok');
-});
-
-app.get('/debug-sentry', () => {
-  throw new Error('Sentry test error (gateway): ' + new Date().toISOString());
-});
-
-app.get('/locales/:lng/:file', async (req, res) => {
-  const localesRoot = path.join(__dirname, './locales');
-  try {
-    const requestedPath = path.resolve(
-      localesRoot,
-      req.params.lng,
-      req.params.file,
-    );
-    const realPath = fs.realpathSync(requestedPath);
-    if (!realPath.startsWith(localesRoot + path.sep)) {
-      return res.status(403).send('Forbidden');
-    }
-    const lngJson = fs.readFileSync(realPath);
-    res.json(JSON.parse(lngJson.toString()));
-  } catch {
-    res.status(500).send('Error fetching locale');
-  }
-});
-app.use('/pl:serviceName', async (req, res) => {
-  try {
-    const serviceName: string = req.params.serviceName.replace(':', '');
-    // const path = req.path;
-
-    // // Forbid access to trpc endpoints
-    // if (path.startsWith('/trpc')) {
-    //   return res.status(403).json({
-    //     error: 'Access to trpc endpoints through plugin proxy is forbidden',
-    //   });
-    // }
-
-    const service = await getPlugin(serviceName);
-
-    const targetUrl = service.address;
-
-    if (targetUrl) {
-      // Proxy the request to the target service using the custom headers
-      return createProxyMiddleware({
-        target: targetUrl,
-        changeOrigin: true, // Change the origin header to the target URL's origin
-        on: {
-          proxyReq,
-        },
-        pathRewrite: {
-          [`^/pl:${serviceName}`]: '/', // Rewriting the path if needed
-        },
-      })(req, res); // Forward the request to the target service
-    } else {
-      // Service not found, return 404
-      res.status(404).send('Service not found');
-    }
-  } catch {
-    res.status(500).send('Error fetching services');
-  }
-});
-
-let httpServer: http.Server;
+let httpServerInternal: http.Server;
+let httpServerExternal: http.Server;
 
 async function start() {
   try {
     const enabledPlugins = await getPlugins();
     await setActivePlugins(enabledPlugins);
 
-    // Initial fetch of the proxy targets
     global.currentTargets = await retryGetProxyTargets();
 
-    // Initialize MQ workers
     console.log('Initializing MQ workers...');
     await initMQWorkers(redis);
     console.log('MQ workers initialized');
 
-    // Start the router with the initial targets
-    console.log('Starting the router...');
-    await startRouter(global.currentTargets);
-    console.log('Router started successfully');
+    console.log('Starting internal and external routers...');
+    await startRouter('internal', global.currentTargets);
+    await startRouter('external', global.currentTargets);
+    console.log('Routers started successfully');
 
-    // Apply the initial proxy middleware
-    applyGraphqlLimiters(app);
-    applyProxiesCoreless(app);
-    applyProxyToCore(app, global.currentTargets);
+    // Apply internal gateway proxies (Port 4000)
+    applyGraphqlLimiters(appInternal);
+    applyProxiesCoreless(appInternal, 50000);
+    applyProxyToCore(appInternal, global.currentTargets);
+    Sentry.setupExpressErrorHandler(appInternal);
 
-    Sentry.setupExpressErrorHandler(app);
+    // Apply external gateway proxies (Port 4001)
+    applyProxiesCoreless(appExternal, 50001);
+    Sentry.setupExpressErrorHandler(appExternal);
 
-    // Start the HTTP server
-    httpServer = http.createServer(app);
-    await new Promise<void>((resolve) => httpServer.listen({ port }, resolve));
+    // Start HTTP Servers
+    httpServerInternal = http.createServer(appInternal);
+    await new Promise<void>((resolve) =>
+      httpServerInternal.listen({ port: portInternal }, resolve),
+    );
+    console.log(`Internal Gateway is running at http://localhost:${portInternal}/`);
 
-    await startSubscriptionServer(httpServer);
-    console.log(`Server is running at http://localhost:${port}/`);
+    httpServerExternal = http.createServer(appExternal);
+    await new Promise<void>((resolve) =>
+      httpServerExternal.listen({ port: portExternal }, resolve),
+    );
+    console.log(`External Gateway is running at http://localhost:${portExternal}/`);
+
+    await startSubscriptionServer(httpServerInternal);
   } catch (error) {
-    console.error('Error starting the server:', error);
+    console.error('Error starting the servers:', error);
     process.exit(1);
   }
 }
 
-// Graceful shutdown for SIGINT and SIGTERM
+// Graceful shutdown
 (['SIGINT', 'SIGTERM'] as NodeJS.Signals[]).forEach((signal) => {
   process.on(signal, async () => {
     console.log(`Exiting on signal ${signal}`);
 
     try {
-      stopRouter(signal);
+      stopRouter('internal', signal);
+      stopRouter('external', signal);
       await stopSubscriptionServer();
-      if (httpServer) {
-        await new Promise((resolve) => httpServer.close(resolve));
+
+      if (httpServerInternal) {
+        await new Promise((resolve) => httpServerInternal.close(resolve));
+      }
+      if (httpServerExternal) {
+        await new Promise((resolve) => httpServerExternal.close(resolve));
       }
       process.exit(0);
     } catch (error) {

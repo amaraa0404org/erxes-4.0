@@ -226,7 +226,7 @@ export default async function userMiddleware(
     try {
       const clientPortalTokenDecoded: any = jwt.verify(
         clientPortalTokenString,
-        process.env.JWT_TOKEN_SECRET || 'SECRET',
+        process.env.CUSTOMER_JWT_SECRET || process.env.JWT_TOKEN_SECRET || 'SECRET',
       );
 
       const clientPortal = await models.ClientPortals.findOne({
@@ -251,7 +251,7 @@ export default async function userMiddleware(
 
           const clientAuthTokenDecoded: any = jwt.verify(
             clientAuthTokenString,
-            process.env.JWT_TOKEN_SECRET || 'SECRET',
+            process.env.CUSTOMER_JWT_SECRET || process.env.JWT_TOKEN_SECRET || 'SECRET',
           );
 
           const clientPortalUser = await models.CPUsers.findOne({
@@ -323,7 +323,7 @@ export default async function userMiddleware(
     // verify user token and retrieve stored user information
     const decoded: any = jwt.verify(
       token,
-      process.env.JWT_TOKEN_SECRET || 'SECRET',
+      process.env.INTERNAL_JWT_SECRET || process.env.JWT_TOKEN_SECRET || 'SECRET',
     );
     const user = decoded.user;
 
