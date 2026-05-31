@@ -201,7 +201,7 @@ model Config {
 
 model Product {
   id                 String    @id @default(uuid())
-  name               String
+  name               Json?     @default("{}")
   shortName          String?
   code               String    @unique
   categoryId         String
@@ -210,7 +210,7 @@ model Product {
   barcodes           String[]  @default([])
   variants           Json?
   barcodeDescription String?
-  description        String?
+  description        Json?     @default("{}")
   unitPrice          Float?
   customFieldsData   Json?     @default("[]")
   propertiesData     Json?     @default("{}")
@@ -1146,5 +1146,28 @@ model Log {
   @@map("logs")
 }
 
+model Translation {
+  id             String   @id @default(uuid())
+  clientPortalId String?
+  namespace      String
+  language       String
+  key            String
+  value          String
+  updatedAt      DateTime @updatedAt
+  updatedBy      String?
 
+  @@unique([clientPortalId, namespace, language, key])
+  @@index([clientPortalId, namespace, language])
+  @@map("translations")
+}
 
+model Language {
+  id        String   @id @default(uuid())
+  code      String   @unique
+  name      String
+  isActive  Boolean  @default(true)
+  isDefault Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@map("languages")
+}

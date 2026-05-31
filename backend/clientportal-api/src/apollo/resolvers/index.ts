@@ -2,6 +2,7 @@ import { clientPortalQueries } from '../../modules/clientportal/graphql/resolver
 import { cpUserQueries } from '../../modules/clientportal/graphql/resolvers/queries/cpUser';
 import { commentQueries } from '../../modules/clientportal/graphql/resolvers/queries/comment';
 import { cpNotificationQueries } from '../../modules/clientportal/graphql/resolvers/queries/cpNotification';
+import { translationQueries } from '../../modules/clientportal/graphql/resolvers/queries/translations';
 
 import { clientPortalMutations } from '../../modules/clientportal/graphql/resolvers/mutations/clientPortal';
 import { cpUserMutations } from '../../modules/clientportal/graphql/resolvers/mutations/cpUser';
@@ -19,6 +20,7 @@ const queries = {
   ...cpUserQueries,
   ...commentQueries,
   ...cpNotificationQueries,
+  ...translationQueries,
 };
 
 const mutations = {

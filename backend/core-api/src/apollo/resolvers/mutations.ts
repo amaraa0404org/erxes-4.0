@@ -25,6 +25,7 @@ import {
 } from '~/modules/import-export/graphql/resolvers';
 import { bundleMutations } from '@/bundle/graphql/resolvers/mutations';
 import { templateMutations } from '@/template/graphql/mutations';
+import { translationMutations } from '@/translations/graphql/mutations';
 
 export const mutations = {
   ...contactMutations,
@@ -52,4 +53,5 @@ export const mutations = {
   ...exportMutations,
   ...bundleMutations,
   ...templateMutations,
+  ...translationMutations,
 };

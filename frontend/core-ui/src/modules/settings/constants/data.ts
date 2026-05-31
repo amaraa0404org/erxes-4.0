@@ -19,6 +19,7 @@ import {
   IconTag,
   IconUserCircle,
   IconUsersGroup,
+  IconLanguage,
 } from '@tabler/icons-react';
 import { TFunction } from 'i18next';
 
@@ -156,12 +157,12 @@ export const SETTINGS_PATH_DATA = (
       path: SettingsWorkspacePath.Brands,
     },
     {
-      name: 'Properties',
+      name: t('properties'),
       icon: IconHierarchy2,
       path: SettingsWorkspacePath.Properties,
     },
     {
-      name: 'Products',
+      name: t('products'),
       icon: IconShoppingCart,
       path: SettingsWorkspacePath.Products,
     },
@@ -170,37 +171,45 @@ export const SETTINGS_PATH_DATA = (
       icon: IconBolt,
       path: SettingsWorkspacePath.Automations,
     },
+    {
+      name: t('translations'),
+      icon: IconLanguage,
+      path: SettingsWorkspacePath.Translations,
+    },
   ],
   developer: [
     {
-      name: 'Client portal',
+      name: t('client-portal'),
       icon: IconBuilding,
       path: SettingsWorkspacePath.ClientPortals,
     },
     {
-      name: 'App tokens',
+      name: t('app-tokens'),
       icon: IconBuilding,
       path: SettingsWorkspacePath.AppTokens,
     },
     {
-      name: 'OAuth clients',
+      name: t('oauth-clients'),
       icon: IconBuilding,
       path: SettingsWorkspacePath.OAuthClients,
     },
     {
-      name: 'System Logs',
+      name: t('system-logs'),
       icon: IconFile,
       path: SettingsWorkspacePath.Logs,
     },
     {
-      name: 'Import & Export',
+      name: t('import-export'),
       icon: IconFileImport,
       path: SettingsWorkspacePath.ImportExport,
     },
   ],
 });
 
-export const GET_SETTINGS_PATH_DATA = (version?: boolean, t?: TFunction) => {
+export const GET_SETTINGS_PATH_DATA = (
+  version?: boolean,
+  t: TFunction = ((key: string) => key) as TFunction,
+) => {
   const settingsData = SETTINGS_PATH_DATA(t);
   const account = [...settingsData.account];
   const nav = [...settingsData.nav];
@@ -209,12 +218,12 @@ export const GET_SETTINGS_PATH_DATA = (version?: boolean, t?: TFunction) => {
   if (version) {
     nav.push(
       {
-        name: 'File upload',
+        name: t('file-upload'),
         icon: IconFile,
         path: SettingsWorkspacePath.FileUpload,
       },
       {
-        name: 'Mail config',
+        name: t('mail-config'),
         icon: IconMail,
         path: SettingsWorkspacePath.MailConfig,
       },

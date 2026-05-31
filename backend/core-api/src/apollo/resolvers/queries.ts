@@ -29,6 +29,7 @@ import { broadcastQueries } from '~/modules/broadcast/graphql/resolvers/queries'
 import { propertiesQueries } from '~/modules/properties/graphql/resolvers/queries';
 import { bundleQueries } from '@/bundle/graphql/resolvers/queries';
 import { templateQueries } from '@/template/graphql/queries';
+import { translationQueries } from '@/translations/graphql/queries';
 
 const sentryTestQueries = {
   _sentryGraphqlTest: () => {
@@ -74,4 +75,5 @@ export const queries = {
   ...activityLogQueries,
   ...bundleQueries,
   ...templateQueries,
+  ...translationQueries,
 };

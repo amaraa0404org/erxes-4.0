@@ -180,6 +180,12 @@ import {
   mutations as templateMutations,
 } from '@/template/graphql/schemas';
 
+import {
+  types as TranslationTypes,
+  queries as TranslationQueries,
+  mutations as TranslationMutations,
+} from '@/translations/graphql/schemas';
+
 export const types = `
     enum CacheControlScope {
       PUBLIC
@@ -226,6 +232,7 @@ export const types = `
     ${BroadcastTypes}
     ${bundleTypes}
     ${templateTypes}
+    ${TranslationTypes}
   `;
 
 export const queries = `
@@ -261,6 +268,7 @@ export const queries = `
     ${BroadcastQueries}
     ${bundleQueries}
     ${templateQueries}
+    ${TranslationQueries}
   `;
 
 export const mutations = `
@@ -293,6 +301,7 @@ export const mutations = `
     ${BroadcastMutations}
     ${bundleMutations}
     ${templateMutations}
+    ${TranslationMutations}
   `;
 
 export default { types, queries, mutations };

@@ -5,6 +5,7 @@ import {
   extractCPUserFromHeader,
   extractClientPortalFromHeader,
   extractUserFromHeader,
+  extractLanguageFromHeader,
 } from '../headers';
 import { generateRequestProcess, getSubdomain } from '../utils';
 import { createScopedEventHandlers } from '../../core-modules/common/eventHandlers/generateEventHandlers';
@@ -31,6 +32,7 @@ export const generateApolloContext =
     const user: any = extractUserFromHeader(req.headers);
     const cpUser: any = extractCPUserFromHeader(req.headers);
     const clientPortal: any = extractClientPortalFromHeader(req.headers);
+    const language = extractLanguageFromHeader(req.headers);
 
     const subdomain = getSubdomain(req);
 
@@ -47,6 +49,7 @@ export const generateApolloContext =
       user,
       cpUser,
       clientPortal,
+      language,
       req,
       res,
       subdomain,

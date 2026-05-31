@@ -92,6 +92,77 @@ app.get('/health', async (_req, res) => {
   res.end('ok');
 });
 
+// ---- Client Portal Translation REST API ----
+
+app.get('/translations/languages', async (_req, res) => {
+  try {
+    const { prisma } = await import('erxes-api-shared/utils');
+
+    const languages = await prisma.language.findMany({
+      where: { isActive: true },
+      select: { code: true, name: true },
+      orderBy: { code: 'asc' },
+    });
+
+    res.set('Cache-Control', 'public, max-age=300');
+    res.json(languages);
+  } catch (e) {
+    console.error('Translation languages error:', e);
+    res.status(500).json({ error: 'Failed to fetch languages' });
+  }
+});
+
+app.get('/translations/:lng/:ns.json', async (req, res) => {
+  try {
+    const { lng, ns } = req.params;
+    const token = req.headers['x-portal-token'] as string;
+
+    const { prisma } = await import('erxes-api-shared/utils');
+
+    let clientPortalId: string | null = null;
+
+    if (token) {
+      const portal = await prisma.clientPortal.findUnique({
+        where: { token },
+        select: { id: true },
+      });
+
+      if (portal) {
+        clientPortalId = portal.id;
+      }
+    }
+
+    // Fetch both layers in parallel
+    const [portalSpecific, portalDefaults] = await Promise.all([
+      clientPortalId
+        ? prisma.translation.findMany({
+            where: { clientPortalId, namespace: ns, language: lng },
+            select: { key: true, value: true },
+          })
+        : [],
+      prisma.translation.findMany({
+        where: { clientPortalId: null, namespace: ns, language: lng },
+        select: { key: true, value: true },
+      }),
+    ]);
+
+    // Merge: portal-specific overrides defaults
+    const result: Record<string, string> = {};
+    for (const entry of portalDefaults) {
+      result[entry.key] = entry.value;
+    }
+    for (const entry of portalSpecific) {
+      result[entry.key] = entry.value;
+    }
+
+    res.set('Cache-Control', 'public, max-age=300');
+    res.json(result);
+  } catch (e) {
+    console.error('Translation fetch error:', e);
+    res.status(500).json({ error: 'Failed to fetch translations' });
+  }
+});
+
 // Wrap the Express server
 const httpServer = http.createServer(app);
 
@@ -105,7 +176,7 @@ httpServer.listen(port, async () => {
     port,
     hasSubscriptions: false,
     meta: {},
-    scope: 'both',
+    scope: 'external',
   });
 });
 

@@ -1,11 +1,12 @@
 import { IProductDocument } from 'erxes-api-shared/core-types';
-import { sendTRPCMessage } from 'erxes-api-shared/utils';
+import { sendTRPCMessage, localizedFieldResolvers } from 'erxes-api-shared/utils';
 import { IContext } from '~/connectionResolvers';
 import { IProductParams } from '~/modules/products/@types';
 
 const inventoryKey = (id?: string) => id || '_';
 
 export default {
+  ...localizedFieldResolvers(['name', 'description']),
   __resolveReference: async (
     { _id }: { _id: string },
     { models }: IContext,

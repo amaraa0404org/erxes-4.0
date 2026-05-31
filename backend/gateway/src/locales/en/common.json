@@ -59,6 +59,25 @@
     "templates": "Templates",
     "exit-settings": "Exit Settings",
     "favorites": "Favorites",
-    "my-inbox": "My inbox"
+    "my-inbox": "My inbox",
+    "properties": "Properties",
+    "products": "Products",
+    "translations": "Translations",
+    "app-tokens": "App Tokens",
+    "oauth-clients": "OAuth Clients",
+    "system-logs": "System Logs",
+    "import-export": "Import & Export",
+    "products-types": "Products types"
+  },
+  "auth": {
+    "forgot-password": {
+      "title": "Forgot password?",
+      "description": "Please enter your email address below to receive a password reset link",
+      "email-label": "Email",
+      "email-placeholder": "Enter your work email",
+      "please-enter-valid-email": "Please enter a valid email address",
+      "sign-in": "Sign in"
+    },
+    "login": "Login"
   }
 }

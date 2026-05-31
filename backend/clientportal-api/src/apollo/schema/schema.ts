@@ -18,12 +18,17 @@ import {
   queries as cpNotificationQueries,
   mutations as cpNotificationMutations,
 } from '../../modules/clientportal/graphql/schemas/cpNotification';
+import {
+  types as translationTypes,
+  queries as translationQueries,
+} from '../../modules/clientportal/graphql/schemas/translations';
 
 export const types = `
   ${clientPortalTypes}
   ${cpUserTypes}
   ${commentTypes}
   ${cpNotificationTypes}
+  ${translationTypes}
 `;
 
 export const queries = `
@@ -35,6 +40,7 @@ export const queries = `
   ${cpUserQueries || ''}
   ${commentQueries || ''}
   ${cpNotificationQueries || ''}
+  ${translationQueries || ''}
 `;
 
 export const mutations = `

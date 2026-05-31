@@ -22,3 +22,4 @@ export * from './string';
 export * from './bulkUtils';
 export * from './editor';
 export * from './prisma';
+export * from './localization';

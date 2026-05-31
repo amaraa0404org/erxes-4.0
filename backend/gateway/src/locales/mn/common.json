@@ -61,6 +61,24 @@
     "templates": "Загварууд",
     "exit-settings": "Тохиргооноос гарах",
     "favorites": "Дуртай",
-    "my-inbox": "Миний инбокс"
+    "my-inbox": "Миний инбокс",
+    "properties": "Properties",
+    "translations": "Орчуулга",
+    "app-tokens": "App Tokens",
+    "oauth-clients": "OAuth Clients",
+    "system-logs": "System Logs",
+    "import-export": "Import & Export",
+    "products-types": "Бүтээгдэхүүний төрлүүд"
+  },
+  "auth": {
+    "forgot-password": {
+      "title": "Нууц үг сэргээх үү?",
+      "description": "Нууц үг сэргээх холбоос хүлээн авах и-мэйл хаягаа оруулна уу",
+      "email-label": "И-мэйл",
+      "email-placeholder": "Ажлын и-мэйл хаягаа оруулна уу",
+      "please-enter-valid-email": "Зөв и-мэйл хаяг оруулна уу",
+      "sign-in": "Нэвтрэх"
+    },
+    "login": "Нэвтрэх"
   }
 }

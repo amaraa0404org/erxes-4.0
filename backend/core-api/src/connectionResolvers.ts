@@ -302,6 +302,14 @@ import {
   loadActivityLogsClass,
   loadPrismaActivityLogs,
 } from '@/logs/db/models/ActivityLogs';
+import {
+  ITranslationModel,
+  loadPrismaTranslations,
+} from '@/translations/db/models/Translations';
+import {
+  ILanguageModel,
+  loadPrismaLanguages,
+} from '@/translations/db/models/Languages';
 
 export interface IModels {
   Brands: IBrandModel;
@@ -366,6 +374,9 @@ export interface IModels {
   TemplateCategory: ITemplateCategoryModal;
   OAuthDeviceCodes: Model<IOAuthDeviceCodeDocument>;
   OAuthRefreshTokens: Model<IOAuthRefreshTokenDocument>;
+
+  Translations: ITranslationModel;
+  Languages: ILanguageModel;
 }
 
 export interface IContext extends IMainContext {
@@ -500,6 +511,9 @@ export const loadClasses = (
 
   models.OAuthDeviceCodes = loadPrismaOAuthDeviceCodes();
   models.OAuthRefreshTokens = loadPrismaOAuthRefreshTokens();
+
+  models.Translations = loadPrismaTranslations(models);
+  models.Languages = loadPrismaLanguages(models);
 
   const db_name = db.name;
 

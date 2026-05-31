@@ -4,13 +4,16 @@ import { Button, Form, Input, useQueryState } from 'erxes-ui';
 import { useEffect, useRef } from 'react';
 import { SubmitHandler, useForm } from 'react-hook-form';
 import { z } from 'zod';
+import { useTranslation } from 'react-i18next';
 
 export const ForgotPasswordForm = () => {
+  const { t } = useTranslation('common');
   const { handleForgotPassword } = useLogin();
   const [email, setEmail] = useQueryState('email');
   const emailInputRef = useRef<HTMLInputElement | null>(null);
+  
   const ForgotPasswordFormValidation = z.object({
-    email: z.string().email({ message: 'Please enter a valid email address' }),
+    email: z.string().email({ message: t('auth.forgot-password.please-enter-valid-email') }),
   });
 
   const form = useForm<z.infer<typeof ForgotPasswordFormValidation>>({
@@ -44,11 +47,11 @@ export const ForgotPasswordForm = () => {
           render={({ field }) => (
             <Form.Item>
               <Form.Label className="font-sans normal-case text-foreground text-sm font-medium leading-none">
-                Email
+                {t('auth.forgot-password.email-label')}
               </Form.Label>
               <Form.Control>
                 <Input
-                  placeholder="Enter your work email"
+                  placeholder={t('auth.forgot-password.email-placeholder')}
                   {...field}
                   ref={(e) => {
                     field.ref(e);
@@ -63,7 +66,7 @@ export const ForgotPasswordForm = () => {
         />
 
         <Button type="submit" className={`h-8`}>
-          Sign in
+          {t('auth.forgot-password.sign-in')}
         </Button>
       </form>
     </Form>

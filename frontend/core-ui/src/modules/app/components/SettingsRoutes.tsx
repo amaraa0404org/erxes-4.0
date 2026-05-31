@@ -123,6 +123,14 @@ const StructureSettings = lazy(() =>
   ),
 );
 
+const TranslationsPage = lazy(() =>
+  import('~/pages/settings/workspace/translations/TranslationsPage').then(
+    (module) => ({
+      default: module.TranslationsPage,
+    }),
+  ),
+);
+
 export function SettingsRoutes() {
   const isOs = useVersion();
 
@@ -214,6 +222,10 @@ export function SettingsRoutes() {
         <Route
           path={SettingsWorkspacePath.Broadcast}
           element={<BroadcastSettings />}
+        />
+        <Route
+          path={SettingsWorkspacePath.Translations}
+          element={<TranslationsPage />}
         />
         {getPluginsSettingsRoutes()}
       </Routes>

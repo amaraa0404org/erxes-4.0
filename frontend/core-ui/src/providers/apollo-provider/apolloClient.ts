@@ -10,6 +10,7 @@ import { onError } from '@apollo/client/link/error';
 import { GraphQLWsLink } from '@apollo/client/link/subscriptions';
 import { getMainDefinition } from '@apollo/client/utilities';
 import { createClient } from 'graphql-ws';
+import i18n from 'i18next';
 
 import { REACT_APP_API_URL } from 'erxes-ui';
 
@@ -77,6 +78,7 @@ const authLink = setContext((_, { headers }) => {
     headers: {
       ...headers,
       sessioncode: getSessionCode(),
+      'x-language': i18n.language || 'en',
     },
   };
 });
