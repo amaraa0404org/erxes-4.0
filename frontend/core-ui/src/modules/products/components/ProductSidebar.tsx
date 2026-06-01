@@ -2,16 +2,13 @@ import { useProductFieldTypes } from '@/products/constants/productFieldTypes';
 import { Sidebar } from 'erxes-ui';
 import { Link, useLocation } from 'react-router-dom';
 import { IProductType } from '@/products/types/productTypes';
-import { useTranslation } from 'react-i18next';
 
 export const ProductSidebar = () => {
   const productFieldTypes = useProductFieldTypes();
-  const { t } = useTranslation('common');
-
   return (
     <Sidebar collapsible="none" className="flex-none border-r">
       <Sidebar.Group>
-        <Sidebar.GroupLabel>{t('sidebar.products-types')}</Sidebar.GroupLabel>
+        <Sidebar.GroupLabel>Products types</Sidebar.GroupLabel>
         <Sidebar.GroupContent>
           <Sidebar.Menu>
             {productFieldTypes.map((productType) => (
