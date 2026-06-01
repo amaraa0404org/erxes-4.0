@@ -1,5 +1,5 @@
 import fetch from 'node-fetch';
-import { getCoreDomain, resetConfigsCache } from 'erxes-api-shared/utils';
+import { getCoreDomain, resetConfigsCache, setActivePlugins } from 'erxes-api-shared/utils';
 import { IContext } from '~/connectionResolvers';
 
 export const organizationConfigMutations = {
@@ -40,5 +40,39 @@ export const organizationConfigMutations = {
     } catch (e) {
       throw new Error(e.message);
     }
+  },
+
+  async configsManagePluginInstall(
+    _parent: undefined,
+    { type, name }: { type: string; name: string },
+    { models }: IContext,
+  ) {
+    const enabledPluginsConfig = await models.Configs.findOne({ code: 'enabled_plugins' });
+    let enabledPlugins: string[] = enabledPluginsConfig?.value || [];
+
+    if (type === 'install') {
+      if (!enabledPlugins.includes(name)) {
+        enabledPlugins.push(name);
+      }
+    } else if (type === 'uninstall') {
+      enabledPlugins = enabledPlugins.filter((plugin) => plugin !== name);
+    }
+
+    await models.Configs.createOrUpdateConfig({
+      code: 'enabled_plugins',
+      value: enabledPlugins,
+    });
+
+    await resetConfigsCache();
+
+    // Update Redis active plugins so gateway picks it up
+    const allPlugins = ['core', ...enabledPlugins];
+    await setActivePlugins(allPlugins);
+
+    return {
+      status: 'success',
+      message: `Plugin ${name} ${type === 'install' ? 'installed' : 'uninstalled'} successfully`,
+      plugins: enabledPlugins,
+    };
   },
 };

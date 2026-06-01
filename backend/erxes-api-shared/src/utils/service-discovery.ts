@@ -23,6 +23,12 @@ export const isDev = NODE_ENV === 'development';
 export const keyForConfig = (name: string) => `erxesservice:config:${name}`;
 
 export const getPlugins = async (): Promise<string[]> => {
+  const activePlugins = await getActivePlugins();
+
+  if (activePlugins.length > 1) {
+    return activePlugins;
+  }
+
   const enabledServices: any[] =
     process.env.ENABLED_PLUGINS?.split(',').map((plugin) => `${plugin}`) || [];
 

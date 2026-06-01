@@ -77,17 +77,24 @@ router.get('/get-frontend-plugins', async (_req: Request, res: Response) => {
     }
   };
 
+  // Get dynamically enabled plugins from database
+  const subdomain = getSubdomain(_req);
+  const models = await generateModels(subdomain);
+  const enabledPluginsConfig = await models.Configs.findOne({ code: 'enabled_plugins' });
+  const dynamicEnabledPlugins = enabledPluginsConfig?.value || [];
+
+  // Merge env plugins with dynamically enabled plugins
+  const envPlugins = ENABLED_PLUGINS ? ENABLED_PLUGINS.split(',').filter(Boolean) : [];
+  const allEnabledPlugins = Array.from(new Set([...envPlugins, ...dynamicEnabledPlugins]));
+
   if (VERSION === 'saas') {
     const remotes: { name: string; entry: string }[] = [];
-    const subdomain = getSubdomain(_req);
 
     const organizationInfo = await getSaasOrganizationDetail({
       subdomain,
     });
 
     const charges = organizationInfo.charge as IOrganizationCharge;
-
-    const enabledPluginsArray = ENABLED_PLUGINS.split(',');
 
     for (const key of Object.keys(charges)) {
       if (
@@ -96,7 +103,7 @@ router.get('/get-frontend-plugins', async (_req: Request, res: Response) => {
       ) {
         const pluginName = key.split(':')[0];
 
-        if (enabledPluginsArray.includes(pluginName)) {
+        if (allEnabledPlugins.includes(pluginName)) {
           const version = await getPluginVersion(pluginName);
           remotes.push({
             name: `${pluginName}_ui`,
@@ -120,14 +127,12 @@ router.get('/get-frontend-plugins', async (_req: Request, res: Response) => {
   } else {
     const remotes: { name: string; entry: string }[] = [];
 
-    if (ENABLED_PLUGINS) {
-      for (const plugin of ENABLED_PLUGINS.split(',')) {
-        const version = await getPluginVersion(plugin);
-        remotes.push({
-          name: `${plugin}_ui`,
-          entry: `https://plugins.erxes.io/${version}/${plugin}_ui/remoteEntry.js`,
-        });
-      }
+    for (const plugin of allEnabledPlugins) {
+      const version = await getPluginVersion(plugin);
+      remotes.push({
+        name: `${plugin}_ui`,
+        entry: `https://plugins.erxes.io/${version}/${plugin}_ui/remoteEntry.js`,
+      });
     }
 
     return res.json(remotes);

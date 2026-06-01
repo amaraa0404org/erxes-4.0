@@ -20,6 +20,7 @@ import {
   IconUserCircle,
   IconUsersGroup,
   IconLanguage,
+  IconPuzzle,
 } from '@tabler/icons-react';
 import { TFunction } from 'i18next';
 
@@ -178,6 +179,11 @@ export const SETTINGS_PATH_DATA = (
     },
   ],
   developer: [
+    {
+      name: t('marketplace'),
+      icon: IconPuzzle,
+      path: SettingsWorkspacePath.Marketplace,
+    },
     {
       name: t('client-portal'),
       icon: IconBuilding,

@@ -131,6 +131,14 @@ const TranslationsPage = lazy(() =>
   ),
 );
 
+const MarketplaceSettings = lazy(() =>
+  import('~/pages/settings/workspace/MarketplaceSettingsPage').then(
+    (module) => ({
+      default: module.MarketplaceSettingsPage,
+    }),
+  ),
+);
+
 export function SettingsRoutes() {
   const isOs = useVersion();
 
@@ -226,6 +234,10 @@ export function SettingsRoutes() {
         <Route
           path={SettingsWorkspacePath.Translations}
           element={<TranslationsPage />}
+        />
+        <Route
+          path={SettingsWorkspacePath.Marketplace}
+          element={<MarketplaceSettings />}
         />
         {getPluginsSettingsRoutes()}
       </Routes>
